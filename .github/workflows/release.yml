@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install zsh for plugin syntax check
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+
+      - name: Test
+        run: |
+          go test ./...
+          go vet ./...
+          zsh -n shell/hi.zsh
+          sh -n scripts/install.sh
+
+      - name: Build release archives
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -eu
+
+          build() {
+            asset_os="$1"
+            goos="$2"
+            goarch="$3"
+            asset_arch="$4"
+            workdir="dist/hi_${asset_os}_${asset_arch}"
+            archive="dist/hi_${asset_os}_${asset_arch}.tar.gz"
+
+            mkdir -p "$workdir"
+            GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 \
+              go build \
+                -trimpath \
+                -ldflags "-s -w -X main.version=${VERSION}" \
+                -o "$workdir/hi" \
+                ./cmd/hi
+
+            tar -czf "$archive" -C "$workdir" hi
+          }
+
+          rm -rf dist
+          mkdir -p dist
+
+          build Darwin darwin arm64 arm64
+          build Darwin darwin amd64 x86_64
+          build Linux linux arm64 arm64
+          build Linux linux amd64 x86_64
+
+          (
+            cd dist
+            sha256sum *.tar.gz > checksums.txt
+          )
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          gh release create "$VERSION" \
+            dist/*.tar.gz \
+            dist/checksums.txt \
+            --title "$VERSION" \
+            --notes "Release $VERSION"

@@ -4,9 +4,14 @@ set -eu
 repo="longyijdos/hi-shell"
 bin_dir="${HI_BIN_DIR:-"$HOME/.local/bin"}"
 bin_path="$bin_dir/hi"
+repo_root=""
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+case "$0" in
+  */*)
+    script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+    repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+    ;;
+esac
 
 mkdir -p "$bin_dir"
 
@@ -56,18 +61,57 @@ download_release() {
   trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 
   version="${HI_SHELL_VERSION:-latest}"
+  asset="hi_${os}_${arch}.tar.gz"
   if [ "$version" = "latest" ]; then
-    url="https://github.com/$repo/releases/latest/download/hi_${os}_${arch}.tar.gz"
+    release_url="https://github.com/$repo/releases/latest/download"
   else
-    url="https://github.com/$repo/releases/download/$version/hi_${os}_${arch}.tar.gz"
+    release_url="https://github.com/$repo/releases/download/$version"
   fi
 
-  curl -fsSL "$url" | tar -xz -C "$tmp_dir"
+  archive="$tmp_dir/$asset"
+  checksums="$tmp_dir/checksums.txt"
+
+  curl -fsSL "$release_url/$asset" -o "$archive"
+  curl -fsSL "$release_url/checksums.txt" -o "$checksums"
+  verify_checksum "$archive" "$asset" "$checksums"
+
+  tar -xzf "$archive" -C "$tmp_dir"
+  if [ ! -f "$tmp_dir/hi" ]; then
+    echo "release archive did not contain hi binary" >&2
+    exit 1
+  fi
+
   cp "$tmp_dir/hi" "$bin_path"
   chmod 0755 "$bin_path"
 }
 
-if [ -f "$repo_root/go.mod" ] && [ -d "$repo_root/cmd/hi" ]; then
+verify_checksum() {
+  archive="$1"
+  asset="$2"
+  checksums="$3"
+
+  expected=$(awk -v asset="$asset" '$2 == asset { print $1 }' "$checksums")
+  if [ -z "$expected" ]; then
+    echo "checksum for $asset was not found" >&2
+    exit 1
+  fi
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual=$(sha256sum "$archive" | awk '{ print $1 }')
+  elif command -v shasum >/dev/null 2>&1; then
+    actual=$(shasum -a 256 "$archive" | awk '{ print $1 }')
+  else
+    echo "sha256sum or shasum is required to verify downloads" >&2
+    exit 1
+  fi
+
+  if [ "$actual" != "$expected" ]; then
+    echo "checksum verification failed for $asset" >&2
+    exit 1
+  fi
+}
+
+if [ -n "$repo_root" ] && [ -f "$repo_root/go.mod" ] && [ -d "$repo_root/cmd/hi" ]; then
   build_from_source
 else
   download_release

@@ -28,6 +28,15 @@ Early MVP. The current build supports zsh on Linux/macOS-style environments and 
 - Secrets stay in environment variables, not config files.
 - Clean install and uninstall with one managed `.zshrc` block.
 
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/longyijdos/hi-shell/main/scripts/install.sh | sh
+exec zsh
+```
+
+Make sure `~/.local/bin` is in your `PATH`.
+
 ## Install From Source
 
 Prerequisites:
@@ -50,8 +59,6 @@ The installer builds `hi` from source into `~/.local/bin/hi`, installs the zsh p
 source "$HOME/.hi/shell/hi.zsh"
 # <<< hi-shell initialize <<<
 ```
-
-Make sure `~/.local/bin` is in your `PATH`.
 
 ## Configure
 
@@ -204,6 +211,17 @@ export PATH="$PWD:$PATH"
 zsh -f
 source ./shell/hi.zsh
 ```
+
+## Release
+
+Create and push a version tag:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow builds Linux/macOS archives for arm64 and x86_64, generates `checksums.txt`, and uploads them to GitHub Releases. The curl installer downloads the matching archive and verifies its checksum before installing.
 
 ## Scope
 
