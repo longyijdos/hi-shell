@@ -85,9 +85,29 @@ _hi_generate_for_prompt() {
   zle redisplay
 }
 
+_hi_is_cli_subcommand() {
+  local query="$1"
+  local -a words
+
+  words=(${(z)query})
+  case "${words[1]:-}" in
+    ""|generate|config|install|uninstall|doctor|version|parse-field|parse-command|help|-h|--help)
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
 _hi_accept_line() {
   if [[ "$BUFFER" == hi\ * ]]; then
     local query="${BUFFER#hi }"
+    if _hi_is_cli_subcommand "$query"; then
+      _hi_clear_state
+      zle .accept-line
+      return
+    fi
+
     _HI_ORIGINAL_BUFFER="$BUFFER"
     _hi_generate_for_prompt "$query"
     return
