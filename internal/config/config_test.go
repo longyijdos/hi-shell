@@ -41,6 +41,22 @@ func TestLoadFileMissingUsesDefaults(t *testing.T) {
 	}
 }
 
+func TestHomeDirDefaultsToHiShellDirectory(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(HomeEnv, "")
+	t.Setenv("HOME", home)
+
+	got, err := HomeDir()
+	if err != nil {
+		t.Fatalf("HomeDir() error = %v", err)
+	}
+
+	want := filepath.Join(home, ".hi-shell")
+	if got != want {
+		t.Fatalf("HomeDir() = %q, want %q", got, want)
+	}
+}
+
 func TestSetRejectsAPIKey(t *testing.T) {
 	cfg := Default()
 	err := Set(&cfg, "api_key", "sk-test")

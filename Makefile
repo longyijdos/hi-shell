@@ -1,7 +1,7 @@
 .PHONY: build test install-local
 
 build:
-	go build -o hi ./cmd/hi
+	go build -o hi-shell ./cmd/hi-shell
 
 test:
 	go test ./...

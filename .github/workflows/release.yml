@@ -45,18 +45,18 @@ jobs:
             goos="$2"
             goarch="$3"
             asset_arch="$4"
-            workdir="dist/hi_${asset_os}_${asset_arch}"
-            archive="dist/hi_${asset_os}_${asset_arch}.tar.gz"
+            workdir="dist/hi-shell_${asset_os}_${asset_arch}"
+            archive="dist/hi-shell_${asset_os}_${asset_arch}.tar.gz"
 
             mkdir -p "$workdir"
             GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 \
               go build \
                 -trimpath \
                 -ldflags "-s -w -X main.version=${VERSION}" \
-                -o "$workdir/hi" \
-                ./cmd/hi
+                -o "$workdir/hi-shell" \
+                ./cmd/hi-shell
 
-            tar -czf "$archive" -C "$workdir" hi
+            tar -czf "$archive" -C "$workdir" hi-shell
           }
 
           rm -rf dist

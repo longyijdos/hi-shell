@@ -3,7 +3,7 @@ set -eu
 
 repo="longyijdos/hi-shell"
 bin_dir="${HI_BIN_DIR:-"$HOME/.local/bin"}"
-bin_path="$bin_dir/hi"
+bin_path="$bin_dir/hi-shell"
 repo_root=""
 
 case "$0" in
@@ -23,7 +23,7 @@ build_from_source() {
 
   (
     cd "$repo_root"
-    go build -ldflags "-X main.version=dev" -o "$bin_path" ./cmd/hi
+    go build -ldflags "-X main.version=dev" -o "$bin_path" ./cmd/hi-shell
   )
 }
 
@@ -61,7 +61,7 @@ download_release() {
   trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 
   version="${HI_SHELL_VERSION:-latest}"
-  asset="hi_${os}_${arch}.tar.gz"
+  asset="hi-shell_${os}_${arch}.tar.gz"
   if [ "$version" = "latest" ]; then
     release_url="https://github.com/$repo/releases/latest/download"
   else
@@ -76,12 +76,12 @@ download_release() {
   verify_checksum "$archive" "$asset" "$checksums"
 
   tar -xzf "$archive" -C "$tmp_dir"
-  if [ ! -f "$tmp_dir/hi" ]; then
-    echo "release archive did not contain hi binary" >&2
+  if [ ! -f "$tmp_dir/hi-shell" ]; then
+    echo "release archive did not contain hi-shell binary" >&2
     exit 1
   fi
 
-  cp "$tmp_dir/hi" "$bin_path"
+  cp "$tmp_dir/hi-shell" "$bin_path"
   chmod 0755 "$bin_path"
 }
 
@@ -111,7 +111,7 @@ verify_checksum() {
   fi
 }
 
-if [ -n "$repo_root" ] && [ -f "$repo_root/go.mod" ] && [ -d "$repo_root/cmd/hi" ]; then
+if [ -n "$repo_root" ] && [ -f "$repo_root/go.mod" ] && [ -d "$repo_root/cmd/hi-shell" ]; then
   build_from_source
 else
   download_release

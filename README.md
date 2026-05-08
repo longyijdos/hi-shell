@@ -24,7 +24,7 @@ Early MVP. The current build supports zsh on Linux/macOS-style environments and 
 - `hi ...` prompts do not enter shell history.
 - Low/medium/high/critical command risk scoring.
 - Critical destructive commands are blocked by default.
-- Config lives under `~/.hi/config.toml`.
+- Config lives under `~/.hi-shell/config.toml`.
 - Secrets stay in environment variables, not config files.
 - Clean install and uninstall with one managed `.zshrc` block.
 
@@ -52,11 +52,11 @@ sh ./scripts/install.sh
 exec zsh
 ```
 
-The installer builds `hi` from source into `~/.local/bin/hi`, installs the zsh plugin under `~/.hi/shell/hi.zsh`, creates a default config, and adds this managed block to `~/.zshrc`:
+The installer builds `hi-shell` from source into `~/.local/bin/hi-shell`, installs the zsh plugin under `~/.hi-shell/shell/hi.zsh`, creates a default config, and adds this managed block to `~/.zshrc`:
 
 ```zsh
 # >>> hi-shell initialize >>>
-source "$HOME/.hi/shell/hi.zsh"
+source "$HOME/.hi-shell/shell/hi.zsh"
 # <<< hi-shell initialize <<<
 ```
 
@@ -67,9 +67,9 @@ OpenAI is the default provider:
 ```sh
 export OPENAI_API_KEY="sk-..."
 
-hi config set provider openai
-hi config set openai.api_key_env OPENAI_API_KEY
-hi config set model gpt-4.1-mini
+hi-shell config set provider openai
+hi-shell config set openai.api_key_env OPENAI_API_KEY
+hi-shell config set model gpt-4.1-mini
 ```
 
 DeepSeek is also supported and has a dedicated low-latency path:
@@ -77,15 +77,15 @@ DeepSeek is also supported and has a dedicated low-latency path:
 ```sh
 export DEEPSEEK_API_KEY="sk-..."
 
-hi config set provider deepseek
-hi config set deepseek.api_key_env DEEPSEEK_API_KEY
-hi config set deepseek.model deepseek-v4-flash
+hi-shell config set provider deepseek
+hi-shell config set deepseek.api_key_env DEEPSEEK_API_KEY
+hi-shell config set deepseek.model deepseek-v4-flash
 ```
 
 View the active config:
 
 ```sh
-hi config get
+hi-shell config get
 ```
 
 Example config:
@@ -131,6 +131,8 @@ hi list all go files
 
 Press Enter to generate a suggestion. Press Tab to accept it into your input buffer. Press Enter again to run it.
 
+`hi` is only the zsh natural-language prefix. Use `hi-shell` for management commands such as config, diagnostics, install, and uninstall.
+
 Keyboard behavior:
 
 | Key | State | Behavior |
@@ -146,12 +148,12 @@ Keyboard behavior:
 CLI usage:
 
 ```sh
-hi generate --prompt "list go files" --format json
-hi doctor
-hi version
+hi-shell generate --prompt "list go files" --format json
+hi-shell doctor
+hi-shell version
 ```
 
-`hi generate --format json` returns:
+`hi-shell generate --format json` returns:
 
 ```json
 {
@@ -180,16 +182,16 @@ Critical commands are blocked by default.
 ## Uninstall
 
 ```sh
-hi uninstall
+hi-shell uninstall
 exec zsh
 ```
 
-This removes the managed `.zshrc` block and installed binary/plugin while preserving `~/.hi/config.toml`.
+This removes the managed `.zshrc` block and installed binary/plugin while preserving `~/.hi-shell/config.toml`.
 
 To remove all hi-shell files:
 
 ```sh
-hi uninstall --purge
+hi-shell uninstall --purge
 exec zsh
 ```
 
@@ -198,7 +200,7 @@ exec zsh
 ```sh
 go test ./...
 go vet ./...
-go build -o hi ./cmd/hi
+go build -o hi-shell ./cmd/hi-shell
 zsh -n shell/hi.zsh
 sh -n scripts/install.sh
 ```
@@ -206,7 +208,7 @@ sh -n scripts/install.sh
 Test the plugin without touching `~/.zshrc`:
 
 ```sh
-go build -o hi ./cmd/hi
+go build -o hi-shell ./cmd/hi-shell
 export PATH="$PWD:$PATH"
 zsh -f
 source ./shell/hi.zsh
@@ -217,8 +219,8 @@ source ./shell/hi.zsh
 Create and push a version tag:
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 The release workflow builds Linux/macOS archives for arm64 and x86_64, generates `checksums.txt`, and uploads them to GitHub Releases. The curl installer downloads the matching archive and verifies its checksum before installing.
@@ -233,4 +235,4 @@ MVP scope:
 - No autonomous execution.
 - No multi-step agent loop.
 
-Local model support, bash/fish plugins, releases, and richer safety UX can come after the zsh workflow is solid.
+Local model support, bash/fish plugins, and richer safety UX can come after the zsh workflow is solid.

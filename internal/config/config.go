@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	HomeEnv        = "HI_HOME"
-	DefaultHomeDir = ".hi"
+	HomeEnv        = "HI_SHELL_HOME"
+	DefaultHomeDir = ".hi-shell"
 	ConfigFileName = "config.toml"
 )
 
