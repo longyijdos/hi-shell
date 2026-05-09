@@ -22,7 +22,6 @@ var ErrSecretNotStored = errors.New("hi-shell does not store API keys in config;
 
 type Config struct {
 	Provider  string         `toml:"provider"`
-	Model     string         `toml:"model"`
 	TimeoutMS int            `toml:"timeout_ms"`
 	OpenAI    OpenAIConfig   `toml:"openai"`
 	DeepSeek  DeepSeekConfig `toml:"deepseek"`
@@ -33,6 +32,7 @@ type Config struct {
 type OpenAIConfig struct {
 	BaseURL   string `toml:"base_url"`
 	APIKeyEnv string `toml:"api_key_env"`
+	Model     string `toml:"model"`
 }
 
 type DeepSeekConfig struct {
@@ -62,11 +62,11 @@ type SafetyConfig struct {
 func Default() Config {
 	return Config{
 		Provider:  "openai",
-		Model:     "gpt-4.1-mini",
 		TimeoutMS: 5000,
 		OpenAI: OpenAIConfig{
 			BaseURL:   "https://api.openai.com/v1",
 			APIKeyEnv: "OPENAI_API_KEY",
+			Model:     "gpt-4.1-mini",
 		},
 		DeepSeek: DeepSeekConfig{
 			BaseURL:   "https://api.deepseek.com/v1",
@@ -202,14 +202,14 @@ func Set(cfg *Config, key, value string) error {
 	switch key {
 	case "provider":
 		cfg.Provider = value
-	case "model":
-		cfg.Model = value
 	case "timeout_ms":
 		timeout, err := strconv.Atoi(value)
 		if err != nil || timeout <= 0 {
 			return fmt.Errorf("timeout_ms must be a positive integer")
 		}
 		cfg.TimeoutMS = timeout
+	case "openai.model":
+		cfg.OpenAI.Model = value
 	case "openai.base_url", "base_url":
 		cfg.OpenAI.BaseURL = value
 	case "openai.api_key_env", "api_key_env":
@@ -267,10 +267,10 @@ func Get(cfg Config, key string) (string, error) {
 	switch key {
 	case "provider":
 		return cfg.Provider, nil
-	case "model":
-		return cfg.Model, nil
 	case "timeout_ms":
 		return strconv.Itoa(cfg.TimeoutMS), nil
+	case "openai.model":
+		return cfg.OpenAI.Model, nil
 	case "openai.base_url", "base_url":
 		return cfg.OpenAI.BaseURL, nil
 	case "openai.api_key_env", "api_key_env":
@@ -325,9 +325,6 @@ func applyDefaults(cfg *Config) {
 	if cfg.Provider == "" {
 		cfg.Provider = defaults.Provider
 	}
-	if cfg.Model == "" {
-		cfg.Model = defaults.Model
-	}
 	if cfg.TimeoutMS <= 0 {
 		cfg.TimeoutMS = defaults.TimeoutMS
 	}
@@ -336,6 +333,9 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.OpenAI.APIKeyEnv == "" {
 		cfg.OpenAI.APIKeyEnv = defaults.OpenAI.APIKeyEnv
+	}
+	if cfg.OpenAI.Model == "" {
+		cfg.OpenAI.Model = defaults.OpenAI.Model
 	}
 	if cfg.DeepSeek.BaseURL == "" {
 		cfg.DeepSeek.BaseURL = defaults.DeepSeek.BaseURL

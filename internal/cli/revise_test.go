@@ -237,7 +237,7 @@ func TestReviseSessionJSONUsesRevisionPrompt(t *testing.T) {
 	t.Setenv(config.HomeEnv, hiHome)
 
 	cfg := config.Default()
-	cfg.Model = "test-model"
+	cfg.OpenAI.Model = "test-model"
 	cfg.OpenAI.BaseURL = server.URL
 	cfg.OpenAI.APIKeyEnv = ""
 	cfg.Context = config.ContextConfig{}

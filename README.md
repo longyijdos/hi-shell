@@ -69,7 +69,7 @@ export OPENAI_API_KEY="sk-..."
 
 hi-shell config set provider openai
 hi-shell config set openai.api_key_env OPENAI_API_KEY
-hi-shell config set model gpt-4.1-mini
+hi-shell config set openai.model gpt-4.1-mini
 ```
 
 DeepSeek is also supported and has a dedicated low-latency path:
@@ -92,12 +92,12 @@ Example config:
 
 ```toml
 provider = "openai"
-model = "gpt-4.1-mini"
 timeout_ms = 5000
 
 [openai]
 base_url = "https://api.openai.com/v1"
 api_key_env = "OPENAI_API_KEY"
+model = "gpt-4.1-mini"
 
 [deepseek]
 base_url = "https://api.deepseek.com/v1"

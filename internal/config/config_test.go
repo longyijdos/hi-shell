@@ -91,3 +91,22 @@ func TestSetDeepSeekConfig(t *testing.T) {
 		t.Fatalf("DeepSeek.MaxTokens = %d", cfg.DeepSeek.MaxTokens)
 	}
 }
+
+func TestSetOpenAIModel(t *testing.T) {
+	cfg := Default()
+
+	if err := Set(&cfg, "openai.model", "gpt-4.1"); err != nil {
+		t.Fatalf("Set(openai.model) error = %v", err)
+	}
+	if cfg.OpenAI.Model != "gpt-4.1" {
+		t.Fatalf("OpenAI.Model = %q", cfg.OpenAI.Model)
+	}
+
+	got, err := Get(cfg, "openai.model")
+	if err != nil {
+		t.Fatalf("Get(openai.model) error = %v", err)
+	}
+	if got != "gpt-4.1" {
+		t.Fatalf("Get(openai.model) = %q", got)
+	}
+}

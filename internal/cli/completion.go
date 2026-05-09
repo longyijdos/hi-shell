@@ -107,18 +107,14 @@ func providerFor(cfg config.Config) (llm.Provider, string, error) {
 		return llm.OpenAIProvider{
 			BaseURL:   cfg.OpenAI.BaseURL,
 			APIKeyEnv: cfg.OpenAI.APIKeyEnv,
-		}, cfg.Model, nil
+		}, cfg.OpenAI.Model, nil
 	case "deepseek":
-		model := cfg.DeepSeek.Model
-		if cfg.Model != "" && cfg.Model != config.Default().Model {
-			model = cfg.Model
-		}
 		return llm.DeepSeekProvider{
 			BaseURL:   cfg.DeepSeek.BaseURL,
 			APIKeyEnv: cfg.DeepSeek.APIKeyEnv,
 			Thinking:  cfg.DeepSeek.Thinking,
 			MaxTokens: cfg.DeepSeek.MaxTokens,
-		}, model, nil
+		}, cfg.DeepSeek.Model, nil
 	default:
 		return nil, "", fmt.Errorf("unsupported provider %q; use openai, openai-compatible, or deepseek", cfg.Provider)
 	}
