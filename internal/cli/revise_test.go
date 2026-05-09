@@ -26,8 +26,7 @@ func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
 				"warning": " ",
 				"feedback": " sort by size "
 			}
-		],
-		"current_feedback": " show human readable sizes "
+		]
 	}`
 
 	inline, err := readRevisionSession(raw, nil)
@@ -43,10 +42,6 @@ func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
 	if inline.Turns[0].Warning != "" {
 		t.Fatalf("Warning = %q, want empty after trim", inline.Turns[0].Warning)
 	}
-	if inline.CurrentFeedback != "show human readable sizes" {
-		t.Fatalf("CurrentFeedback = %q", inline.CurrentFeedback)
-	}
-
 	fromStdin, err := readRevisionSession("-", strings.NewReader(raw))
 	if err != nil {
 		t.Fatalf("readRevisionSession(stdin) error = %v", err)
@@ -63,8 +58,8 @@ func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("readRevisionSession(file) error = %v", err)
 	}
-	if fromFile.CurrentFeedback != inline.CurrentFeedback {
-		t.Fatalf("file CurrentFeedback = %q, want %q", fromFile.CurrentFeedback, inline.CurrentFeedback)
+	if fromFile.Turns[0].Feedback != inline.Turns[0].Feedback {
+		t.Fatalf("file feedback = %q, want %q", fromFile.Turns[0].Feedback, inline.Turns[0].Feedback)
 	}
 }
 
@@ -85,9 +80,14 @@ func TestParseRevisionSessionValidation(t *testing.T) {
 			wantErr: "unknown field",
 		},
 		{
+			name:    "no turns",
+			raw:     `{"initial_prompt":"list files"}`,
+			wantErr: "turns must contain at least one command with feedback",
+		},
+		{
 			name:    "latest turn needs feedback",
 			raw:     `{"initial_prompt":"list files","turns":[{"command":"ls"}]}`,
-			wantErr: "current_feedback is required",
+			wantErr: "turns[0].feedback is required",
 		},
 		{
 			name:    "empty command",
@@ -116,8 +116,7 @@ func TestParseRevisionSessionValidation(t *testing.T) {
 
 func TestParseRevisionSessionKeepsRecentTurns(t *testing.T) {
 	session := promptpkg.Session{
-		InitialPrompt:   "list files",
-		CurrentFeedback: "keep recent context",
+		InitialPrompt: "list files",
 	}
 	for i := 0; i < maxSessionTurns+2; i++ {
 		session.Turns = append(session.Turns, promptpkg.SessionTurn{
@@ -255,10 +254,10 @@ func TestReviseSessionJSONUsesRevisionPrompt(t *testing.T) {
 				"feedback": "sort by size"
 			},
 			{
-				"command": "find . -type f -size +100M -printf '%s %p\\n' | sort -nr"
+				"command": "find . -type f -size +100M -printf '%s %p\\n' | sort -nr",
+				"feedback": "show human readable sizes"
 			}
-		],
-		"current_feedback": "show human readable sizes"
+		]
 	}`
 
 	var stdout bytes.Buffer
@@ -286,7 +285,7 @@ func TestReviseSessionJSONUsesRevisionPrompt(t *testing.T) {
 		"Command revision session:",
 		"Initial user request:\nlist large files",
 		"User feedback after this command: sort by size",
-		"Latest user feedback:\nshow human readable sizes",
+		"User feedback after this command: show human readable sizes",
 	} {
 		if !strings.Contains(userPrompt, fragment) {
 			t.Fatalf("user prompt missing %q:\n%s", fragment, userPrompt)

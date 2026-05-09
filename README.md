@@ -138,11 +138,12 @@ Keyboard behavior:
 | Key | State | Behavior |
 | --- | --- | --- |
 | Enter | buffer starts with `hi ` | Generate a command suggestion |
+| Enter | feedback text exists | Revise the suggestion with session history |
+| Enter | suggestion exists, no feedback | Keep the suggestion and show a reminder |
 | Enter | normal shell input | Run normal zsh `accept-line` |
 | Tab | suggestion exists | Accept suggestion into `BUFFER` |
 | Tab | no suggestion | Use normal zsh completion |
-| Esc | suggestion exists | Clear suggestion |
-| Ctrl-R | suggestion exists | Regenerate |
+| Text input | suggestion exists | Hide the ghost text and collect feedback |
 | Ctrl-C | any state | Cancel transient state |
 
 CLI usage:
@@ -175,10 +176,9 @@ hi-shell version
       "command": "find . -type f -size +100M",
       "risk": "low",
       "warning": "",
-      "feedback": "sort by size"
+      "feedback": "sort by size and show human readable sizes"
     }
-  ],
-  "current_feedback": "show human readable sizes"
+  ]
 }
 ```
 

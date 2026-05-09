@@ -129,13 +129,12 @@ func parseRevisionSession(data []byte) (promptpkg.Session, error) {
 	if err != nil {
 		return promptpkg.Session{}, err
 	}
-	session.CurrentFeedback, err = cleanSessionField("current_feedback", session.CurrentFeedback, false)
-	if err != nil {
-		return promptpkg.Session{}, err
-	}
 
 	if len(session.Turns) > maxSessionTurns {
 		session.Turns = session.Turns[len(session.Turns)-maxSessionTurns:]
+	}
+	if len(session.Turns) == 0 {
+		return promptpkg.Session{}, fmt.Errorf("turns must contain at least one command with feedback")
 	}
 	for i := range session.Turns {
 		turn := &session.Turns[i]
@@ -157,8 +156,8 @@ func parseRevisionSession(data []byte) (promptpkg.Session, error) {
 		}
 	}
 
-	if len(session.Turns) > 0 && session.CurrentFeedback == "" && session.Turns[len(session.Turns)-1].Feedback == "" {
-		return promptpkg.Session{}, fmt.Errorf("current_feedback is required when the latest turn has no feedback")
+	if session.Turns[len(session.Turns)-1].Feedback == "" {
+		return promptpkg.Session{}, fmt.Errorf("turns[%d].feedback is required", len(session.Turns)-1)
 	}
 
 	return session, nil

@@ -17,10 +17,10 @@ func TestBuildSessionIncludesHistoryAndFeedback(t *testing.T) {
 				Feedback: "sort by size",
 			},
 			{
-				Command: "find . -type f -size +100M -printf '%s %p\\n' | sort -nr",
+				Command:  "find . -type f -size +100M -printf '%s %p\\n' | sort -nr",
+				Feedback: "show human readable sizes",
 			},
 		},
-		CurrentFeedback: "show human readable sizes",
 	}, shellcontext.Snapshot{
 		WorkingDir: "/tmp/project",
 		OS:         "linux",
@@ -34,7 +34,7 @@ func TestBuildSessionIncludesHistoryAndFeedback(t *testing.T) {
 		"Risk: low",
 		"User feedback after this command: sort by size",
 		"2. Command: find . -type f -size +100M -printf '%s %p\\n' | sort -nr",
-		"Latest user feedback:\nshow human readable sizes",
+		"User feedback after this command: show human readable sizes",
 		"pwd: /tmp/project",
 		"os: linux/amd64",
 		"Generate a revised command",

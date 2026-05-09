@@ -13,9 +13,8 @@ type Prompt struct {
 }
 
 type Session struct {
-	InitialPrompt   string        `json:"initial_prompt"`
-	Turns           []SessionTurn `json:"turns"`
-	CurrentFeedback string        `json:"current_feedback"`
+	InitialPrompt string        `json:"initial_prompt"`
+	Turns         []SessionTurn `json:"turns"`
 }
 
 type SessionTurn struct {
@@ -34,7 +33,7 @@ func Build(userRequest string, snapshot shellcontext.Snapshot) Prompt {
 }
 
 func BuildSession(session Session, snapshot shellcontext.Snapshot) Prompt {
-	if len(session.Turns) == 0 && strings.TrimSpace(session.CurrentFeedback) == "" {
+	if len(session.Turns) == 0 {
 		return Build(session.InitialPrompt, snapshot)
 	}
 
@@ -61,12 +60,6 @@ func BuildSession(session Session, snapshot shellcontext.Snapshot) Prompt {
 	} else {
 		b.WriteString("Generated commands and user feedback so far:\n")
 		b.WriteString("None.\n")
-	}
-
-	if session.CurrentFeedback != "" {
-		b.WriteString("\nLatest user feedback:\n")
-		b.WriteString(session.CurrentFeedback)
-		b.WriteString("\n")
 	}
 
 	b.WriteString("\nLocal context:\n")
