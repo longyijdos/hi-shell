@@ -10,23 +10,23 @@ hi() {
   return 2
 }
 
-typeset -g _HI_ORIGINAL_BUFFER=""
 typeset -g _HI_ORIGINAL_PROMPT=""
 typeset -g _HI_SUGGESTION=""
 typeset -g _HI_RISK=""
 typeset -g _HI_WARNING=""
-typeset -g _HI_REFINING=""
+typeset -g _HI_REVISING=""
 typeset -g _HI_ENTER_WIDGET=""
 typeset -g _HI_LINEFEED_WIDGET=""
 typeset -g _HI_TAB_WIDGET=""
-typeset -g _HI_CTRL_C_WIDGET=""
+typeset -g _HI_REVISE_WIDGET=""
+typeset -g _HI_CANCEL_WIDGET=""
 typeset -g _HI_SELF_INSERT_WIDGET="_hi_original_self_insert"
-typeset -ga _HI_TURN_COMMANDS=()
-typeset -ga _HI_TURN_RISKS=()
-typeset -ga _HI_TURN_WARNINGS=()
-typeset -ga _HI_TURN_FEEDBACKS=()
+typeset -g _HI_HIGHLIGHT_DISABLED=""
+typeset -g _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=""
+typeset -ga _HI_TURNS=()
+typeset -ga _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS=()
 
-autoload -Uz add-zle-hook-widget
+autoload -Uz add-zle-hook-widget add-zsh-hook
 
 _hi_bound_widget() {
   local binding
@@ -38,25 +38,89 @@ _hi_call_widget() {
   local widget="$1"
   local fallback="$2"
 
-  if [[ -n "$widget" && "$widget" != _hi_accept_line && "$widget" != _hi_accept_suggestion && "$widget" != _hi_cancel && "$widget" != _hi_self_insert ]]; then
-    zle "$widget" 2>/dev/null && return
-  fi
+  case "$widget" in
+    ""|_hi_accept_line|_hi_accept_suggestion|_hi_revise_mode|_hi_cancel|_hi_self_insert) ;;
+    *) zle "$widget" 2>/dev/null && return ;;
+  esac
 
   zle "$fallback"
 }
 
 _hi_clear_state() {
-  _HI_ORIGINAL_BUFFER=""
+  _hi_restore_highlighting
   _HI_ORIGINAL_PROMPT=""
   _HI_SUGGESTION=""
   _HI_RISK=""
   _HI_WARNING=""
-  _HI_REFINING=""
-  _HI_TURN_COMMANDS=()
-  _HI_TURN_RISKS=()
-  _HI_TURN_WARNINGS=()
-  _HI_TURN_FEEDBACKS=()
+  _HI_REVISING=""
+  _HI_TURNS=()
   POSTDISPLAY=""
+}
+
+_hi_disable_highlighting() {
+  if [[ -z "$_HI_HIGHLIGHT_DISABLED" ]]; then
+    _HI_HIGHLIGHT_DISABLED=1
+    if (( ${+ZSH_HIGHLIGHT_HIGHLIGHTERS} )); then
+      _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=1
+      _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS=("${ZSH_HIGHLIGHT_HIGHLIGHTERS[@]}")
+    else
+      _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=""
+      _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS=()
+    fi
+    ZSH_HIGHLIGHT_HIGHLIGHTERS=()
+  fi
+
+  region_highlight=()
+  zle redisplay
+}
+
+_hi_restore_highlighting() {
+  if [[ -z "$_HI_HIGHLIGHT_DISABLED" ]]; then
+    return
+  fi
+
+  if [[ -n "$_HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET" ]]; then
+    ZSH_HIGHLIGHT_HIGHLIGHTERS=("${_HI_ZSH_HIGHLIGHT_HIGHLIGHTERS[@]}")
+  else
+    unset ZSH_HIGHLIGHT_HIGHLIGHTERS
+  fi
+
+  _HI_HIGHLIGHT_DISABLED=""
+  _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=""
+  _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS=()
+  region_highlight=()
+}
+
+_hi_show_status() {
+  zle -R "$1"
+}
+
+_hi_show_no_command() {
+  local warning="$1"
+
+  zle redisplay
+  if [[ -n "$warning" ]]; then
+    zle -M "hi-shell: $warning"
+  else
+    zle -M "hi-shell: no command generated"
+  fi
+}
+
+_hi_display_suggestion() {
+  _HI_SUGGESTION="$1"
+  _HI_RISK="$2"
+  _HI_WARNING="$3"
+  _HI_REVISING=""
+
+  BUFFER=""
+  CURSOR=0
+  POSTDISPLAY="$_HI_SUGGESTION"
+
+  zle redisplay
+
+  if [[ -n "$_HI_WARNING" && "$_HI_RISK" == (high|critical) ]]; then
+    zle -M "hi-shell: $_HI_WARNING"
+  fi
 }
 
 _hi_json_string() {
@@ -66,7 +130,7 @@ _hi_json_string() {
   value="${value//$'\n'/\\n}"
   value="${value//$'\r'/\\r}"
   value="${value//$'\t'/\\t}"
-  print -r -- "\"$value\""
+  print -rn -- "\"$value\""
 }
 
 _hi_turn_json() {
@@ -88,7 +152,7 @@ _hi_turn_json() {
 
 _hi_revision_json() {
   local feedback="$1"
-  local count="${#_HI_TURN_COMMANDS[@]}"
+  local count="${#_HI_TURNS[@]}"
   local i
   local wrote_turn=0
 
@@ -100,7 +164,7 @@ _hi_revision_json() {
     if (( wrote_turn )); then
       print -rn -- ','
     fi
-    _hi_turn_json "${_HI_TURN_COMMANDS[$i]}" "${_HI_TURN_RISKS[$i]}" "${_HI_TURN_WARNINGS[$i]}" "${_HI_TURN_FEEDBACKS[$i]}"
+    print -rn -- "${_HI_TURNS[$i]}"
     wrote_turn=1
   done
 
@@ -119,6 +183,7 @@ _hi_generate_for_prompt() {
   local result command risk warning
 
   _hi_clear_state
+  _hi_show_status "hi-shell: generating..."
 
   result="$(command hi-shell generate --prompt "$query" --format json 2>&1)"
   if (( $? != 0 )); then
@@ -134,35 +199,19 @@ _hi_generate_for_prompt() {
 
   if [[ -z "$command" ]]; then
     _hi_clear_state
-    zle redisplay
-    if [[ -n "$warning" ]]; then
-      zle -M "hi-shell: $warning"
-    else
-      zle -M "hi-shell: no command generated"
-    fi
+    _hi_show_no_command "$warning"
     return 1
   fi
 
   _HI_ORIGINAL_PROMPT="$query"
-  _HI_SUGGESTION="$command"
-  _HI_RISK="$risk"
-  _HI_WARNING="$warning"
-  _HI_REFINING=""
-
-  BUFFER=""
-  CURSOR=0
-  POSTDISPLAY="$_HI_SUGGESTION"
-
-  zle redisplay
-
-  if [[ -n "$_HI_WARNING" && "$_HI_RISK" == (high|critical) ]]; then
-    zle -M "hi-shell: $_HI_WARNING"
-  fi
+  _hi_display_suggestion "$command" "$risk" "$warning"
 }
 
 _hi_revise_for_feedback() {
   local feedback="$1"
   local result command risk warning
+
+  _hi_show_status "hi-shell: revising..."
 
   result="$(_hi_revision_json "$feedback" | command hi-shell revise --session-json - --format json 2>&1)"
   if (( $? != 0 )); then
@@ -178,45 +227,27 @@ _hi_revise_for_feedback() {
 
   if [[ -z "$command" ]]; then
     POSTDISPLAY=""
-    zle redisplay
-    if [[ -n "$warning" ]]; then
-      zle -M "hi-shell: $warning"
-    else
-      zle -M "hi-shell: no command generated"
-    fi
+    _hi_show_no_command "$warning"
     return 1
   fi
 
-  _HI_TURN_COMMANDS+=("$_HI_SUGGESTION")
-  _HI_TURN_RISKS+=("$_HI_RISK")
-  _HI_TURN_WARNINGS+=("$_HI_WARNING")
-  _HI_TURN_FEEDBACKS+=("$feedback")
-
-  _HI_SUGGESTION="$command"
-  _HI_RISK="$risk"
-  _HI_WARNING="$warning"
-  _HI_REFINING=""
-
-  BUFFER=""
-  CURSOR=0
-  POSTDISPLAY="$_HI_SUGGESTION"
-
-  zle redisplay
-
-  if [[ -n "$_HI_WARNING" && "$_HI_RISK" == (high|critical) ]]; then
-    zle -M "hi-shell: $_HI_WARNING"
-  fi
+  _HI_TURNS+=("$(_hi_turn_json "$_HI_SUGGESTION" "$_HI_RISK" "$_HI_WARNING" "$feedback")")
+  _hi_display_suggestion "$command" "$risk" "$warning"
 }
 
 _hi_accept_line() {
   local widget="$_HI_ENTER_WIDGET"
 
-  if [[ -n "$_HI_SUGGESTION" ]]; then
+  if [[ "$KEYS" == $'\n' ]]; then
+    widget="$_HI_LINEFEED_WIDGET"
+  fi
+
+  if [[ -n "$_HI_SUGGESTION" && -n "$_HI_REVISING" ]]; then
     local feedback="$BUFFER"
 
     if [[ -z "${feedback//[[:space:]]/}" ]]; then
       zle redisplay
-      zle -M "hi-shell: press Tab to accept or type feedback"
+      zle -M "hi-shell: type feedback or press Ctrl-G to cancel"
       return
     fi
 
@@ -226,13 +257,14 @@ _hi_accept_line() {
 
   if [[ "$BUFFER" == hi\ * ]]; then
     local query="${BUFFER#hi }"
-    _HI_ORIGINAL_BUFFER="$BUFFER"
     _hi_generate_for_prompt "$query"
     return
   fi
 
-  if [[ "$KEYS" == $'\n' ]]; then
-    widget="$_HI_LINEFEED_WIDGET"
+  if [[ -n "$_HI_SUGGESTION" ]]; then
+    _hi_clear_state
+    _hi_call_widget "$widget" ".accept-line"
+    return
   fi
 
   _hi_clear_state
@@ -240,10 +272,10 @@ _hi_accept_line() {
 }
 
 _hi_accept_suggestion() {
-  if [[ -n "$_HI_SUGGESTION" && -z "$_HI_REFINING" ]]; then
+  if [[ -n "$_HI_SUGGESTION" && -n "$POSTDISPLAY" ]]; then
     BUFFER="$_HI_SUGGESTION"
     CURSOR=${#BUFFER}
-    _hi_clear_state
+    POSTDISPLAY=""
     zle redisplay
     return
   fi
@@ -252,22 +284,34 @@ _hi_accept_suggestion() {
 }
 
 _hi_self_insert() {
-  if [[ -n "$_HI_SUGGESTION" && -z "$_HI_REFINING" ]]; then
+  if [[ -n "$_HI_SUGGESTION" && -n "$POSTDISPLAY" ]]; then
     POSTDISPLAY=""
-    _HI_REFINING=1
   fi
 
   _hi_call_widget "$_HI_SELF_INSERT_WIDGET" ".self-insert"
 }
 
-_hi_line_pre_redraw() {
-  if [[ -n "$_HI_REFINING" ]]; then
-    region_highlight=()
+_hi_revise_mode() {
+  if [[ -z "$_HI_SUGGESTION" ]]; then
+    _hi_call_widget "$_HI_REVISE_WIDGET" ".undefined-key"
+    return
   fi
+
+  if [[ -n "$_HI_REVISING" ]]; then
+    _HI_REVISING=""
+    _hi_restore_highlighting
+    zle redisplay
+    zle -M "hi-shell: command edit mode"
+    return
+  fi
+
+  _HI_REVISING=1
+  _hi_disable_highlighting
+  zle -M "hi-shell: revise mode"
 }
 
 _hi_cancel() {
-  if [[ -n "$_HI_SUGGESTION" || -n "$_HI_ORIGINAL_BUFFER" ]]; then
+  if [[ -n "$_HI_SUGGESTION" ]]; then
     BUFFER=""
     CURSOR=0
     _hi_clear_state
@@ -275,23 +319,28 @@ _hi_cancel() {
     return
   fi
 
-  _hi_call_widget "$_HI_CTRL_C_WIDGET" ".send-break"
+  _hi_call_widget "$_HI_CANCEL_WIDGET" ".send-break"
 }
 
 _HI_ENTER_WIDGET="$(_hi_bound_widget '^M')"
 _HI_LINEFEED_WIDGET="$(_hi_bound_widget '^J')"
 _HI_TAB_WIDGET="$(_hi_bound_widget '^I')"
-_HI_CTRL_C_WIDGET="$(_hi_bound_widget '^C')"
+_HI_REVISE_WIDGET="$(_hi_bound_widget '^X')"
+_HI_CANCEL_WIDGET="$(_hi_bound_widget '^G')"
 
 zle -N _hi_accept_line
 zle -N _hi_accept_suggestion
 zle -A self-insert "$_HI_SELF_INSERT_WIDGET"
 zle -N self-insert _hi_self_insert
+zle -N _hi_revise_mode
 zle -N _hi_cancel
 
-add-zle-hook-widget zle-line-pre-redraw _hi_line_pre_redraw 2>/dev/null
+add-zle-hook-widget zle-line-init _hi_clear_state 2>/dev/null
+add-zle-hook-widget zle-line-finish _hi_clear_state 2>/dev/null
+add-zsh-hook precmd _hi_clear_state 2>/dev/null
 
 bindkey '^M' _hi_accept_line
 bindkey '^J' _hi_accept_line
 bindkey '^I' _hi_accept_suggestion
-bindkey '^C' _hi_cancel
+bindkey '^X' _hi_revise_mode
+bindkey '^G' _hi_cancel

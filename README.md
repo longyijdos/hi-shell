@@ -138,13 +138,14 @@ Keyboard behavior:
 | Key | State | Behavior |
 | --- | --- | --- |
 | Enter | buffer starts with `hi ` | Generate a command suggestion |
-| Enter | feedback text exists | Revise the suggestion with session history |
-| Enter | suggestion exists, no feedback | Keep the suggestion and show a reminder |
+| Enter | revise mode | Revise the suggestion with session history |
+| Enter | suggestion exists, revise mode off | Run current `BUFFER` normally |
 | Enter | normal shell input | Run normal zsh `accept-line` |
-| Tab | suggestion exists | Accept suggestion into `BUFFER` |
+| Tab | suggestion visible | Accept suggestion into `BUFFER` |
 | Tab | no suggestion | Use normal zsh completion |
-| Text input | suggestion exists | Hide the ghost text and collect feedback |
-| Ctrl-C | any state | Cancel transient state |
+| Text input | suggestion visible | Hide the ghost text and edit normally |
+| Ctrl-X | suggestion exists | Toggle revise mode |
+| Ctrl-G | any state | Cancel transient state |
 
 CLI usage:
 
