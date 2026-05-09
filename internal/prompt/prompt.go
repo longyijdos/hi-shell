@@ -1,23 +1,91 @@
 package prompt
 
-import shellcontext "github.com/longyijdos/hi-shell/internal/context"
+import (
+	"fmt"
+	"strings"
+
+	shellcontext "github.com/longyijdos/hi-shell/internal/context"
+)
 
 type Prompt struct {
 	System string
 	User   string
 }
 
-func Build(userRequest string, snapshot shellcontext.Snapshot) Prompt {
-	contextText := snapshot.String()
-	if contextText == "" {
-		contextText = "No local context was collected."
-	}
+type Session struct {
+	InitialPrompt   string        `json:"initial_prompt"`
+	Turns           []SessionTurn `json:"turns"`
+	CurrentFeedback string        `json:"current_feedback"`
+}
 
+type SessionTurn struct {
+	Command  string `json:"command"`
+	Risk     string `json:"risk"`
+	Warning  string `json:"warning"`
+	Feedback string `json:"feedback"`
+}
+
+func Build(userRequest string, snapshot shellcontext.Snapshot) Prompt {
 	return Prompt{
 		System: systemPrompt,
 		User: "User request:\n" + userRequest + "\n\n" +
-			"Local context:\n" + contextText,
+			"Local context:\n" + contextString(snapshot),
 	}
+}
+
+func BuildSession(session Session, snapshot shellcontext.Snapshot) Prompt {
+	if len(session.Turns) == 0 && strings.TrimSpace(session.CurrentFeedback) == "" {
+		return Build(session.InitialPrompt, snapshot)
+	}
+
+	var b strings.Builder
+	b.WriteString("Command revision session:\n\n")
+	b.WriteString("Initial user request:\n")
+	b.WriteString(session.InitialPrompt)
+	b.WriteString("\n\n")
+
+	if len(session.Turns) > 0 {
+		b.WriteString("Generated commands and user feedback so far:\n")
+		for i, turn := range session.Turns {
+			fmt.Fprintf(&b, "%d. Command: %s\n", i+1, turn.Command)
+			if turn.Risk != "" {
+				fmt.Fprintf(&b, "   Risk: %s\n", turn.Risk)
+			}
+			if turn.Warning != "" {
+				fmt.Fprintf(&b, "   Warning: %s\n", turn.Warning)
+			}
+			if turn.Feedback != "" {
+				fmt.Fprintf(&b, "   User feedback after this command: %s\n", turn.Feedback)
+			}
+		}
+	} else {
+		b.WriteString("Generated commands and user feedback so far:\n")
+		b.WriteString("None.\n")
+	}
+
+	if session.CurrentFeedback != "" {
+		b.WriteString("\nLatest user feedback:\n")
+		b.WriteString(session.CurrentFeedback)
+		b.WriteString("\n")
+	}
+
+	b.WriteString("\nLocal context:\n")
+	b.WriteString(contextString(snapshot))
+	b.WriteString("\n\n")
+	b.WriteString("Generate a revised command that satisfies the initial request and the user's feedback. Avoid repeating issues the user has already corrected.")
+
+	return Prompt{
+		System: systemPrompt,
+		User:   b.String(),
+	}
+}
+
+func contextString(snapshot shellcontext.Snapshot) string {
+	contextText := snapshot.String()
+	if contextText == "" {
+		return "No local context was collected."
+	}
+	return contextText
 }
 
 const systemPrompt = `You are hi-shell, a tiny zsh command composer.

@@ -9,46 +9,12 @@ import (
 	"testing"
 )
 
-func TestGenerateRequiresPromptFlag(t *testing.T) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := Run([]string{"generate", "list", "go", "files"}, &stdout, &stderr, "test")
-	if code != 2 {
-		t.Fatalf("exit code = %d, want 2", code)
-	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %q, want empty", stdout.String())
-	}
-	if !strings.Contains(stderr.String(), "requires --prompt") {
-		t.Fatalf("stderr = %q, want prompt error", stderr.String())
-	}
-	if !strings.Contains(stderr.String(), "hi-shell generate") {
-		t.Fatalf("stderr = %q, want hi-shell generate example", stderr.String())
-	}
-}
-
 func TestRunRejectsInvalidArguments(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       []string
 		wantStderr string
 	}{
-		{
-			name:       "generate extra args",
-			args:       []string{"generate", "--prompt", "list go files", "extra"},
-			wantStderr: `unexpected argument "extra"`,
-		},
-		{
-			name:       "generate blank prompt",
-			args:       []string{"generate", "--prompt", "   "},
-			wantStderr: "requires --prompt",
-		},
-		{
-			name:       "generate unsupported format",
-			args:       []string{"generate", "--prompt", "list go files", "--format", "xml"},
-			wantStderr: `unsupported format "xml"`,
-		},
 		{
 			name:       "config get extra args",
 			args:       []string{"config", "get", "provider", "extra"},
@@ -110,7 +76,7 @@ func TestRunRejectsInvalidArguments(t *testing.T) {
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 
-			code := Run(tt.args, &stdout, &stderr, "test")
+			code := Run(tt.args, strings.NewReader(""), &stdout, &stderr, "test")
 			if code != 2 {
 				t.Fatalf("exit code = %d, want 2; stderr = %q", code, stderr.String())
 			}
@@ -131,6 +97,7 @@ func TestRunRejectsInvalidArguments(t *testing.T) {
 func TestRunSubcommandHelpReturnsZero(t *testing.T) {
 	subcommands := map[string]string{
 		"generate":      generateUsage,
+		"revise":        reviseUsage,
 		"config":        configUsage,
 		"install":       installUsage,
 		"uninstall":     uninstallUsage,
@@ -151,7 +118,7 @@ func TestRunSubcommandHelpReturnsZero(t *testing.T) {
 				var stdout bytes.Buffer
 				var stderr bytes.Buffer
 
-				code := Run([]string{subcommand, helpArg}, &stdout, &stderr, "test")
+				code := Run([]string{subcommand, helpArg}, strings.NewReader(""), &stdout, &stderr, "test")
 				if code != 0 {
 					t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr.String())
 				}

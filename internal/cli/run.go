@@ -8,6 +8,7 @@ import (
 
 const (
 	generateUsage     = `usage: hi-shell generate --prompt <text> [--format text|json]`
+	reviseUsage       = `usage: hi-shell revise --session-json <json|-|@file> [--format text|json]`
 	configUsage       = `usage: hi-shell config get [key] | hi-shell config set <key> <value> | hi-shell config path`
 	configSetUsage    = `usage: hi-shell config set <key> <value>`
 	installUsage      = `usage: hi-shell install zsh`
@@ -18,7 +19,7 @@ const (
 	parseCommandUsage = `usage: hi-shell parse-command <json>`
 )
 
-func Run(args []string, stdout, stderr io.Writer, version string) int {
+func Run(args []string, stdin io.Reader, stdout, stderr io.Writer, version string) int {
 	if len(args) == 0 {
 		usage(stderr)
 		return 2
@@ -27,6 +28,8 @@ func Run(args []string, stdout, stderr io.Writer, version string) int {
 	switch args[0] {
 	case "generate":
 		return commandGenerate(args[1:], stdout, stderr)
+	case "revise":
+		return commandRevise(args[1:], stdin, stdout, stderr)
 	case "config":
 		return commandConfig(args[1:], stdout, stderr)
 	case "install":
@@ -101,6 +104,7 @@ func usage(w io.Writer) {
 
 Usage:
   hi-shell generate --prompt "list all files" --format json
+  hi-shell revise --session-json - --format json
   hi-shell config get [key]
   hi-shell config set <key> <value>
   hi-shell install zsh
