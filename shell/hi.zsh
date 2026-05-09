@@ -47,7 +47,7 @@ _hi_call_widget() {
 }
 
 _hi_clear_state() {
-  _hi_restore_highlighting
+  _hi_exit_revise_mode
   _HI_ORIGINAL_PROMPT=""
   _HI_SUGGESTION=""
   _HI_RISK=""
@@ -91,6 +91,16 @@ _hi_restore_highlighting() {
   region_highlight=()
 }
 
+_hi_enter_revise_mode() {
+  _HI_REVISING=1
+  _hi_disable_highlighting
+}
+
+_hi_exit_revise_mode() {
+  _HI_REVISING=""
+  _hi_restore_highlighting
+}
+
 _hi_show_status() {
   zle -R "$1"
 }
@@ -110,7 +120,7 @@ _hi_display_suggestion() {
   _HI_SUGGESTION="$1"
   _HI_RISK="$2"
   _HI_WARNING="$3"
-  _HI_REVISING=""
+  _hi_exit_revise_mode
 
   BUFFER=""
   CURSOR=0
@@ -298,15 +308,13 @@ _hi_revise_mode() {
   fi
 
   if [[ -n "$_HI_REVISING" ]]; then
-    _HI_REVISING=""
-    _hi_restore_highlighting
+    _hi_exit_revise_mode
     zle redisplay
     zle -M "hi-shell: command edit mode"
     return
   fi
 
-  _HI_REVISING=1
-  _hi_disable_highlighting
+  _hi_enter_revise_mode
   zle -M "hi-shell: revise mode"
 }
 
