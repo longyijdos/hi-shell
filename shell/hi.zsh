@@ -23,6 +23,7 @@ typeset -g _HI_CANCEL_WIDGET=""
 typeset -g _HI_SELF_INSERT_WIDGET="_hi_original_self_insert"
 typeset -g _HI_HIGHLIGHT_DISABLED=""
 typeset -g _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=""
+typeset -gi _HI_HISTORY_LIMIT=20
 typeset -ga _HI_TURNS=()
 typeset -ga _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS=()
 
@@ -116,6 +117,22 @@ _hi_show_no_command() {
   fi
 }
 
+_hi_recent_history() {
+  fc -ln "-${_HI_HISTORY_LIMIT}" 2>/dev/null
+}
+
+_hi_run_cli() {
+  local recent_history
+
+  recent_history="$(_hi_recent_history)"
+  if [[ -n "$recent_history" ]]; then
+    HI_SHELL_HISTORY="$recent_history" command hi-shell "$@"
+    return
+  fi
+
+  command hi-shell "$@"
+}
+
 _hi_display_suggestion() {
   _HI_SUGGESTION="$1"
   _HI_RISK="$2"
@@ -195,7 +212,7 @@ _hi_generate_for_prompt() {
   _hi_clear_state
   _hi_show_status "hi-shell: generating..."
 
-  result="$(command hi-shell generate --prompt "$query" --format json 2>&1)"
+  result="$(_hi_run_cli generate --prompt "$query" --format json 2>&1)"
   if (( $? != 0 )); then
     _hi_clear_state
     zle redisplay
@@ -223,7 +240,7 @@ _hi_revise_for_feedback() {
 
   _hi_show_status "hi-shell: revising..."
 
-  result="$(_hi_revision_json "$feedback" | command hi-shell revise --session-json - --format json 2>&1)"
+  result="$(_hi_revision_json "$feedback" | _hi_run_cli revise --session-json - --format json 2>&1)"
   if (( $? != 0 )); then
     POSTDISPLAY=""
     zle redisplay

@@ -25,6 +25,7 @@ type Snapshot struct {
 	GitAvailable   bool
 	ProjectTypes   []string
 	PackageScripts map[string]string
+	RecentHistory  []string
 }
 
 func Collect(settings config.ContextConfig) Snapshot {
@@ -53,6 +54,9 @@ func Collect(settings config.ContextConfig) Snapshot {
 	}
 	if settings.PackageScripts && wd != "" {
 		snap.PackageScripts = readPackageScripts(wd)
+	}
+	if settings.History {
+		snap.RecentHistory = sanitizeHistory(os.Getenv(historyEnv))
 	}
 
 	return snap
@@ -96,6 +100,12 @@ func (s Snapshot) String() string {
 			scripts = append(scripts, key+"="+s.PackageScripts[key])
 		}
 		lines = append(lines, "package scripts: "+strings.Join(scripts, "; "))
+	}
+	if len(s.RecentHistory) > 0 {
+		lines = append(lines, "recent history:")
+		for _, command := range s.RecentHistory {
+			lines = append(lines, "- "+command)
+		}
 	}
 
 	return strings.Join(lines, "\n")
