@@ -11,6 +11,7 @@ const (
 	reviseUsage       = `usage: hi-shell revise --session-json <json|-|@file> [--format text|json]`
 	configUsage       = `usage: hi-shell config get [key] | hi-shell config set <key> <value> | hi-shell config path`
 	configSetUsage    = `usage: hi-shell config set <key> <value>`
+	riskUsage         = `usage: hi-shell risk --command <command> [--format text|json]`
 	installUsage      = `usage: hi-shell install zsh`
 	uninstallUsage    = `usage: hi-shell uninstall [--purge]`
 	doctorUsage       = `usage: hi-shell doctor`
@@ -32,6 +33,8 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer, version strin
 		return commandRevise(args[1:], stdin, stdout, stderr)
 	case "config":
 		return commandConfig(args[1:], stdout, stderr)
+	case "risk":
+		return commandRisk(args[1:], stdout, stderr)
 	case "install":
 		return commandInstall(args[1:], stdout, stderr)
 	case "uninstall":
@@ -107,6 +110,7 @@ Usage:
   hi-shell revise --session-json - --format json
   hi-shell config get [key]
   hi-shell config set <key> <value>
+  hi-shell risk --command 'rm -rf /' --format json
   hi-shell install zsh
   hi-shell uninstall [--purge]
   hi-shell doctor

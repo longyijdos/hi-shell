@@ -51,6 +51,11 @@ func TestRunRejectsInvalidArguments(t *testing.T) {
 			wantStderr: `unexpected argument "extra"`,
 		},
 		{
+			name:       "risk missing command",
+			args:       []string{"risk"},
+			wantStderr: "requires --command",
+		},
+		{
 			name:       "version extra args",
 			args:       []string{"version", "extra"},
 			wantStderr: `unexpected argument "extra"`,
@@ -99,6 +104,7 @@ func TestRunSubcommandHelpReturnsZero(t *testing.T) {
 		"generate":      generateUsage,
 		"revise":        reviseUsage,
 		"config":        configUsage,
+		"risk":          riskUsage,
 		"install":       installUsage,
 		"uninstall":     uninstallUsage,
 		"doctor":        doctorUsage,

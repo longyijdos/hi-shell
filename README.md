@@ -154,6 +154,7 @@ CLI usage:
 ```sh
 hi-shell generate --prompt "list go files" --format json
 hi-shell revise --session-json - --format json
+hi-shell risk --command 'rm -rf /' --format json
 hi-shell doctor
 hi-shell version
 ```
@@ -166,6 +167,13 @@ hi-shell version
   "risk": "safe",
   "warning": ""
 }
+```
+
+Inspect local risk scoring without calling an LLM:
+
+```sh
+hi-shell risk --command 'rm -rf /'
+hi-shell risk --command 'find . -name "node_modules" -type d -exec rm -rf {} +' --format json
 ```
 
 `hi-shell revise` is for integrations that keep an in-memory command revision session. `--session-json` accepts inline JSON, `-` for stdin, or `@path/to/session.json`:
