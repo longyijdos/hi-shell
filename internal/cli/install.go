@@ -55,7 +55,7 @@ func commandInstall(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "install: %v\n", err)
 		return 1
 	}
-	if err := ensureManagedBlock(zshrcPath, managedBlock()); err != nil {
+	if err := ensureManagedBlock(zshrcPath, managedBlock(hiHome)); err != nil {
 		fmt.Fprintf(stderr, "install: %v\n", err)
 		return 1
 	}
@@ -112,10 +112,15 @@ func commandUninstall(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func managedBlock() string {
+func managedBlock(hiHome string) string {
+	pluginPath := filepath.Join(hiHome, "shell", "hi.zsh")
 	return beginMarker + "\n" +
-		`source "$HOME/.hi-shell/shell/hi.zsh"` + "\n" +
+		"source " + shellQuote(pluginPath) + "\n" +
 		endMarker + "\n"
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
 func zshrcPath() (string, error) {
