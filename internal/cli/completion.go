@@ -16,10 +16,9 @@ import (
 )
 
 type generateResponse struct {
-	Command     string `json:"command"`
-	Risk        string `json:"risk"`
-	Warning     string `json:"warning"`
-	Explanation string `json:"explanation"`
+	Command string `json:"command"`
+	Risk    string `json:"risk"`
+	Warning string `json:"warning"`
 }
 
 func parseOutputFormat(outputFormat string) (string, error) {
@@ -69,15 +68,13 @@ func runCommandGeneration(outputFormat string, buildPrompt func(shellcontext.Sna
 
 	assessment := risk.Score(command, cfg.Safety)
 	response := generateResponse{
-		Command:     command,
-		Risk:        string(assessment.Level),
-		Warning:     assessment.Warning,
-		Explanation: completion.Explanation,
+		Command: command,
+		Risk:    string(assessment.Level),
+		Warning: assessment.Warning,
 	}
 	if assessment.Blocked {
 		response.Command = ""
 		response.Warning = assessment.Warning
-		response.Explanation = "The generated command was blocked by safety settings."
 	}
 
 	switch outputFormat {

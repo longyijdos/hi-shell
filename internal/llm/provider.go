@@ -17,8 +17,7 @@ type Request struct {
 }
 
 type Completion struct {
-	Command     string
-	Explanation string
+	Command string
 }
 
 type Provider interface {
