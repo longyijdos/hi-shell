@@ -22,8 +22,8 @@ Early MVP. The current build supports zsh on Linux/macOS-style environments and 
 - zsh ghost-text flow using ZLE widgets.
 - Tab accepts the suggestion; Enter runs only after you accept.
 - `hi ...` prompts do not enter shell history.
-- Low/medium/high/critical command risk scoring.
-- Critical destructive commands are blocked by default.
+- Safe/warn/blocked command risk scoring.
+- Clearly catastrophic commands are blocked by default.
 - Config lives under `~/.hi-shell/config.toml`.
 - Secrets stay in environment variables, not config files.
 - Clean install and uninstall with one managed `.zshrc` block.
@@ -163,7 +163,7 @@ hi-shell version
 ```json
 {
   "command": "find . -name \"*.go\"",
-  "risk": "low",
+  "risk": "safe",
   "warning": ""
 }
 ```
@@ -176,7 +176,7 @@ hi-shell version
   "turns": [
     {
       "command": "find . -type f -size +100M",
-      "risk": "low",
+      "risk": "safe",
       "warning": "",
       "feedback": "sort by size and show human readable sizes"
     }
@@ -192,12 +192,11 @@ The shell plugin only inserts a suggestion into the current command line after y
 
 Risk scoring is intentionally conservative:
 
-- `low`: read-only or harmless commands.
-- `medium`: writes files, installs packages, or changes git state.
-- `high`: `sudo`, broad deletes, permission changes, process kills, service changes.
-- `critical`: obvious system damage such as `rm -rf /` or `chmod -R 777 /`.
+- `safe`: no warning.
+- `warn`: show a warning, but still allow the user to accept the suggestion.
+- `blocked`: do not return an executable command by default.
 
-Critical commands are blocked by default.
+Clearly catastrophic commands such as `rm -rf /` or `chmod -R 777 /` are blocked by default.
 
 ## Uninstall
 

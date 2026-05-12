@@ -145,7 +145,7 @@ _hi_display_suggestion() {
 
   zle redisplay
 
-  if [[ -n "$_HI_WARNING" && "$_HI_RISK" == (high|critical) ]]; then
+  if [[ -n "$_HI_WARNING" ]]; then
     zle -M "hi-shell: $_HI_WARNING"
   fi
 }

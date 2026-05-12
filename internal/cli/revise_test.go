@@ -22,7 +22,7 @@ func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
 		"turns": [
 			{
 				"command": " find . -type f -size +100M ",
-				"risk": " low ",
+				"risk": " safe ",
 				"warning": " ",
 				"feedback": " sort by size "
 			}
@@ -250,7 +250,7 @@ func TestReviseSessionJSONUsesRevisionPrompt(t *testing.T) {
 		"turns": [
 			{
 				"command": "find . -type f -size +100M",
-				"risk": "low",
+				"risk": "safe",
 				"feedback": "sort by size"
 			},
 			{

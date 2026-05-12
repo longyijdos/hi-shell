@@ -13,7 +13,7 @@ func TestBuildSessionIncludesHistoryAndFeedback(t *testing.T) {
 		Turns: []SessionTurn{
 			{
 				Command:  "find . -type f -size +100M",
-				Risk:     "low",
+				Risk:     "safe",
 				Feedback: "sort by size",
 			},
 			{
@@ -31,7 +31,7 @@ func TestBuildSessionIncludesHistoryAndFeedback(t *testing.T) {
 		"Command revision session:",
 		"Initial user request:\nlist large files",
 		"1. Command: find . -type f -size +100M",
-		"Risk: low",
+		"Risk: safe",
 		"User feedback after this command: sort by size",
 		"2. Command: find . -type f -size +100M -printf '%s %p\\n' | sort -nr",
 		"User feedback after this command: show human readable sizes",
