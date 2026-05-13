@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"unicode/utf8"
 
@@ -55,40 +54,14 @@ func commandRevise(args []string, stdin io.Reader, stdout, stderr io.Writer) int
 	}
 
 	return runCommandGeneration(format, func(snapshot shellcontext.Snapshot) promptpkg.Prompt {
-		return promptpkg.BuildSession(session, snapshot)
+		return promptpkg.BuildReviseSession(session, snapshot)
 	}, stdout, stderr)
 }
 
-func readRevisionSession(source string, stdin io.Reader) (promptpkg.Session, error) {
-	source = strings.TrimSpace(source)
-	if source == "" {
-		return promptpkg.Session{}, fmt.Errorf("requires non-empty JSON")
-	}
-
-	var data []byte
-	var err error
-	switch {
-	case source == "-":
-		data, err = readLimited(stdin, maxSessionJSONBytes)
-	case strings.HasPrefix(source, "@"):
-		path := strings.TrimSpace(strings.TrimPrefix(source, "@"))
-		if path == "" {
-			return promptpkg.Session{}, fmt.Errorf("@file path is empty")
-		}
-		file, openErr := os.Open(path)
-		if openErr != nil {
-			return promptpkg.Session{}, fmt.Errorf("read %s: %w", path, openErr)
-		}
-		defer file.Close()
-		data, err = readLimited(file, maxSessionJSONBytes)
-	default:
-		if len([]byte(source)) > maxSessionJSONBytes {
-			return promptpkg.Session{}, fmt.Errorf("JSON exceeds %d bytes", maxSessionJSONBytes)
-		}
-		data = []byte(source)
-	}
+func readRevisionSession(source string, stdin io.Reader) (promptpkg.ReviseSession, error) {
+	data, err := readSessionJSON(source, stdin)
 	if err != nil {
-		return promptpkg.Session{}, err
+		return promptpkg.ReviseSession{}, err
 	}
 
 	return parseRevisionSession(data)
@@ -108,56 +81,56 @@ func readLimited(reader io.Reader, maxBytes int64) ([]byte, error) {
 	return data, nil
 }
 
-func parseRevisionSession(data []byte) (promptpkg.Session, error) {
+func parseRevisionSession(data []byte) (promptpkg.ReviseSession, error) {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
-		return promptpkg.Session{}, fmt.Errorf("requires non-empty JSON")
+		return promptpkg.ReviseSession{}, fmt.Errorf("requires non-empty JSON")
 	}
 
-	var session promptpkg.Session
+	var session promptpkg.ReviseSession
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&session); err != nil {
-		return promptpkg.Session{}, fmt.Errorf("parse JSON: %w", err)
+		return promptpkg.ReviseSession{}, fmt.Errorf("parse JSON: %w", err)
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
-		return promptpkg.Session{}, fmt.Errorf("parse JSON: trailing data")
+		return promptpkg.ReviseSession{}, fmt.Errorf("parse JSON: trailing data")
 	}
 
 	var err error
 	session.InitialPrompt, err = cleanSessionField("initial_prompt", session.InitialPrompt, true)
 	if err != nil {
-		return promptpkg.Session{}, err
+		return promptpkg.ReviseSession{}, err
 	}
 
 	if len(session.Turns) > maxSessionTurns {
 		session.Turns = session.Turns[len(session.Turns)-maxSessionTurns:]
 	}
 	if len(session.Turns) == 0 {
-		return promptpkg.Session{}, fmt.Errorf("turns must contain at least one command with feedback")
+		return promptpkg.ReviseSession{}, fmt.Errorf("turns must contain at least one command with feedback")
 	}
 	for i := range session.Turns {
 		turn := &session.Turns[i]
 		turn.Command, err = cleanSessionField(fmt.Sprintf("turns[%d].command", i), turn.Command, true)
 		if err != nil {
-			return promptpkg.Session{}, err
+			return promptpkg.ReviseSession{}, err
 		}
 		turn.Risk, err = cleanSessionField(fmt.Sprintf("turns[%d].risk", i), turn.Risk, false)
 		if err != nil {
-			return promptpkg.Session{}, err
+			return promptpkg.ReviseSession{}, err
 		}
 		turn.Warning, err = cleanSessionField(fmt.Sprintf("turns[%d].warning", i), turn.Warning, false)
 		if err != nil {
-			return promptpkg.Session{}, err
+			return promptpkg.ReviseSession{}, err
 		}
 		turn.Feedback, err = cleanSessionField(fmt.Sprintf("turns[%d].feedback", i), turn.Feedback, false)
 		if err != nil {
-			return promptpkg.Session{}, err
+			return promptpkg.ReviseSession{}, err
 		}
 	}
 
 	if session.Turns[len(session.Turns)-1].Feedback == "" {
-		return promptpkg.Session{}, fmt.Errorf("turns[%d].feedback is required", len(session.Turns)-1)
+		return promptpkg.ReviseSession{}, fmt.Errorf("turns[%d].feedback is required", len(session.Turns)-1)
 	}
 
 	return session, nil

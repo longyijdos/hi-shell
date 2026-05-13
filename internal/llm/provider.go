@@ -61,3 +61,7 @@ func NormalizeCommand(raw string) string {
 
 	return ""
 }
+
+func NormalizeAnswer(raw string) string {
+	return strings.TrimSpace(raw)
+}

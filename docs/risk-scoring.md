@@ -16,6 +16,14 @@ The model only produces the command. Risk is decided locally by deterministic ru
 }
 ```
 
+`hi-shell ask --format json` returns answer text only:
+
+```json
+{
+  "answer": "No. This command only reads matching file metadata and prints paths."
+}
+```
+
 Risk values are intentionally three-state:
 
 - `safe`: no warning.

@@ -56,10 +56,8 @@ func TestDeepSeekProviderSendsFastCommandOptions(t *testing.T) {
 	if payload["temperature"] != 0.1 {
 		t.Fatalf("temperature = %#v, want 0.1", payload["temperature"])
 	}
-
-	stop, ok := payload["stop"].([]any)
-	if !ok || len(stop) != 1 || stop[0] != "\n" {
-		t.Fatalf("stop = %#v, want newline stop", payload["stop"])
+	if _, ok := payload["stop"]; ok {
+		t.Fatalf("stop = %#v, want omitted", payload["stop"])
 	}
 
 	messages, ok := payload["messages"].([]any)
@@ -75,5 +73,39 @@ func TestDeepSeekProviderSendsFastCommandOptions(t *testing.T) {
 	}
 	if _, ok := firstMessage["content"]; !ok {
 		t.Fatalf("first message missing lowercase content: %#v", firstMessage)
+	}
+}
+
+func TestDeepSeekProviderPreservesMultiLineResponse(t *testing.T) {
+	var payload map[string]any
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"Line one.\nLine two."}}]}`))
+	}))
+	defer server.Close()
+
+	provider := DeepSeekProvider{
+		BaseURL:  server.URL,
+		Thinking: "disabled",
+	}
+	completion, err := provider.Generate(context.Background(), Request{
+		Model: "deepseek-v4-flash",
+		Messages: []Message{
+			{Role: "system", Content: "Answer questions."},
+			{Role: "user", Content: "explain this command"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	if completion.Command != "Line one.\nLine two." {
+		t.Fatalf("Command = %q", completion.Command)
+	}
+	if _, ok := payload["stop"]; ok {
+		t.Fatalf("stop = %#v, want omitted", payload["stop"])
 	}
 }

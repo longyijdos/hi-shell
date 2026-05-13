@@ -36,14 +36,17 @@ hi-shell config set keybindings.prefix '^[;'
 
 ## Prefix Keymap
 
-The plugin creates a dedicated `hi-shell-prefix` keymap. This keymap currently has two commands:
+The plugin creates a dedicated `hi-shell-prefix` keymap. This keymap currently has three mode commands plus cancel:
 
 | Key | Behavior |
 | --- | --- |
-| `r` | Toggle revise mode for the current suggestion. |
+| `e` | Switch to edit mode for the current suggestion. |
+| `r` | Switch to revise mode for the current suggestion. |
+| `a` | Switch to ask mode for the current suggestion. |
 | `q` | Exit prefix mode without changing the suggestion. |
 
 Unknown prefix keys leave prefix mode and show a short message.
+Pressing the key for the already-active mode leaves the mode unchanged and shows a short message.
 
 Canceling a shell input line remains a shell concern. The plugin does not bind Ctrl-C or Ctrl-G. zsh's normal line finish and prompt hooks clear hi-shell's transient state.
 
@@ -94,7 +97,19 @@ Revise mode is entered with prefix then `r`. While revise mode is active:
 - An empty feedback buffer shows a message instead of calling the LLM.
 - Ctrl-C remains the normal zsh way to abandon the current line.
 
-The plugin keeps the in-memory revision session as JSON strings in `_HI_TURNS`. The Go CLI validates and limits the session data before using it in prompts.
+The plugin keeps the in-memory revision session as JSON strings in `_HI_REVISE_TURNS`. The Go CLI validates and limits the session data before using it in prompts.
+
+## Ask Flow
+
+Ask mode is entered with prefix then `a`. While ask mode is active:
+
+- User text in `BUFFER` is treated as a question about the current suggestion.
+- Enter sends an ask session to `hi-shell ask`.
+- The answer is shown as a ZLE message and the current suggestion remains available.
+- Ask history is separate from revision history and is cleared with the current hi-shell session state.
+- An empty question buffer shows a message instead of calling the LLM.
+
+The plugin keeps the in-memory ask session as JSON strings in `_HI_ASK_TURNS`. The Go CLI validates and limits the session data before using it in prompts.
 
 ## Extension Rules
 
@@ -104,7 +119,6 @@ Add a new prefix action only when it does real work that cannot be handled by no
 
 Good candidates:
 
-- `e`: explain or inspect the current suggestion.
 - `s`: show detailed risk information.
 - `y`: copy the current suggestion.
 
@@ -121,6 +135,7 @@ Current automated coverage:
 - `zsh -n shell/hi.zsh` verifies plugin syntax.
 - Config tests cover `keybindings.prefix` defaults, save/load, set, and get.
 - CLI integration tests continue to cover generation, revision, and risk behavior.
+- CLI integration tests continue to cover ask behavior.
 
 Manual keymap smoke test:
 
@@ -129,7 +144,9 @@ tmp=$(mktemp -d)
 PATH="$PWD:$PATH" HI_SHELL_HOME="$tmp" zsh -fc '
   source shell/hi.zsh
   bindkey "^]"
+  bindkey -M hi-shell-prefix e
   bindkey -M hi-shell-prefix r
+  bindkey -M hi-shell-prefix a
   bindkey -M hi-shell-prefix q
 '
 rm -rf "$tmp"

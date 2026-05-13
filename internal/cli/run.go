@@ -9,6 +9,7 @@ import (
 const (
 	generateUsage     = `usage: hi-shell generate --prompt <text> [--format text|json]`
 	reviseUsage       = `usage: hi-shell revise --session-json <json|-|@file> [--format text|json]`
+	askUsage          = `usage: hi-shell ask --session-json <json|-|@file> [--format text|json]`
 	configUsage       = `usage: hi-shell config get [key] | hi-shell config set <key> <value> | hi-shell config path`
 	configSetUsage    = `usage: hi-shell config set <key> <value>`
 	riskUsage         = `usage: hi-shell risk --command <command> [--format text|json]`
@@ -31,6 +32,8 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer, version strin
 		return commandGenerate(args[1:], stdout, stderr)
 	case "revise":
 		return commandRevise(args[1:], stdin, stdout, stderr)
+	case "ask":
+		return commandAsk(args[1:], stdin, stdout, stderr)
 	case "config":
 		return commandConfig(args[1:], stdout, stderr)
 	case "risk":
@@ -108,6 +111,7 @@ func usage(w io.Writer) {
 Usage:
   hi-shell generate --prompt "list all files" --format json
   hi-shell revise --session-json - --format json
+  hi-shell ask --session-json - --format json
   hi-shell config get [key]
   hi-shell config set <key> <value>
   hi-shell risk --command 'rm -rf /' --format json

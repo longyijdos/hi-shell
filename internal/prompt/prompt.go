@@ -12,29 +12,42 @@ type Prompt struct {
 	User   string
 }
 
-type Session struct {
-	InitialPrompt string        `json:"initial_prompt"`
-	Turns         []SessionTurn `json:"turns"`
+type ReviseSession struct {
+	InitialPrompt string       `json:"initial_prompt"`
+	Turns         []ReviseTurn `json:"turns"`
 }
 
-type SessionTurn struct {
+type ReviseTurn struct {
 	Command  string `json:"command"`
 	Risk     string `json:"risk"`
 	Warning  string `json:"warning"`
 	Feedback string `json:"feedback"`
 }
 
-func Build(userRequest string, snapshot shellcontext.Snapshot) Prompt {
+type AskSession struct {
+	InitialPrompt string    `json:"initial_prompt"`
+	Turns         []AskTurn `json:"turns"`
+}
+
+type AskTurn struct {
+	Command  string `json:"command"`
+	Risk     string `json:"risk"`
+	Warning  string `json:"warning"`
+	Question string `json:"question"`
+	Answer   string `json:"answer"`
+}
+
+func BuildGenerate(userRequest string, snapshot shellcontext.Snapshot) Prompt {
 	return Prompt{
-		System: systemPrompt,
+		System: commandSystemPrompt,
 		User: "User request:\n" + userRequest + "\n\n" +
 			"Local context:\n" + contextString(snapshot),
 	}
 }
 
-func BuildSession(session Session, snapshot shellcontext.Snapshot) Prompt {
+func BuildReviseSession(session ReviseSession, snapshot shellcontext.Snapshot) Prompt {
 	if len(session.Turns) == 0 {
-		return Build(session.InitialPrompt, snapshot)
+		return BuildGenerate(session.InitialPrompt, snapshot)
 	}
 
 	var b strings.Builder
@@ -68,7 +81,42 @@ func BuildSession(session Session, snapshot shellcontext.Snapshot) Prompt {
 	b.WriteString("Generate a revised command that satisfies the initial request and the user's feedback. Avoid repeating issues the user has already corrected.")
 
 	return Prompt{
-		System: systemPrompt,
+		System: commandSystemPrompt,
+		User:   b.String(),
+	}
+}
+
+func BuildAskSession(session AskSession, snapshot shellcontext.Snapshot) Prompt {
+	var b strings.Builder
+	b.WriteString("Command question session:\n\n")
+	b.WriteString("Initial user request:\n")
+	b.WriteString(session.InitialPrompt)
+	b.WriteString("\n\n")
+
+	b.WriteString("Commands and questions so far:\n")
+	for i, turn := range session.Turns {
+		fmt.Fprintf(&b, "%d. Command: %s\n", i+1, turn.Command)
+		if turn.Risk != "" {
+			fmt.Fprintf(&b, "   Risk: %s\n", turn.Risk)
+		}
+		if turn.Warning != "" {
+			fmt.Fprintf(&b, "   Warning: %s\n", turn.Warning)
+		}
+		if turn.Question != "" {
+			fmt.Fprintf(&b, "   User question: %s\n", turn.Question)
+		}
+		if turn.Answer != "" {
+			fmt.Fprintf(&b, "   Previous answer: %s\n", turn.Answer)
+		}
+	}
+
+	b.WriteString("\nLocal context:\n")
+	b.WriteString(contextString(snapshot))
+	b.WriteString("\n\n")
+	b.WriteString("Answer the user's latest question about the command. Be concise and practical. Do not generate a replacement command unless the user explicitly asks what a possible command would look like.")
+
+	return Prompt{
+		System: askSystemPrompt,
 		User:   b.String(),
 	}
 }
@@ -81,7 +129,7 @@ func contextString(snapshot shellcontext.Snapshot) string {
 	return contextText
 }
 
-const systemPrompt = `You are hi-shell, a tiny zsh command composer.
+const commandSystemPrompt = `You are hi-shell, a tiny zsh command composer.
 
 Return exactly one single-line zsh-compatible shell command and nothing else.
 
@@ -95,3 +143,14 @@ Rules:
 - Do not chain multiple independent operations unless the user explicitly asks for multiple steps.
 - Do not use destructive commands unless the user explicitly requested a destructive action.
 - If the request is unsafe or unclear, return the safest useful alternative command.`
+
+const askSystemPrompt = `You are hi-shell, a concise shell command explainer.
+
+Answer questions about the provided zsh command and its risk/warning context.
+
+Rules:
+- Return only the answer text.
+- Do not include markdown code fences.
+- Be direct and practical.
+- If the question asks whether the command changes files, installs packages, deletes data, or touches credentials, answer that explicitly.
+- Do not invent facts about files or command output that are not present in the context.`

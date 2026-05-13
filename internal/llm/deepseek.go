@@ -54,7 +54,6 @@ func (p DeepSeekProvider) Generate(ctx context.Context, req Request) (Completion
 		Model:     req.Model,
 		Messages:  req.Messages,
 		MaxTokens: maxTokens,
-		Stop:      []string{"\n"},
 		Thinking:  &deepSeekThinking{Type: thinking},
 	}
 	if thinking == "disabled" {
@@ -113,7 +112,6 @@ type deepSeekRequest struct {
 	Messages    []Message         `json:"messages"`
 	Temperature *float64          `json:"temperature,omitempty"`
 	MaxTokens   int               `json:"max_tokens,omitempty"`
-	Stop        []string          `json:"stop,omitempty"`
 	Thinking    *deepSeekThinking `json:"thinking,omitempty"`
 }
 

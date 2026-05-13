@@ -27,6 +27,7 @@ func TestMessageJSONUsesProviderFieldNames(t *testing.T) {
 func TestNormalizeCommand(t *testing.T) {
 	tests := map[string]string{
 		"find . -type f":                   "find . -type f",
+		"find . -type f\nextra text":       "find . -type f",
 		"$ ls -la":                         "ls -la",
 		"```zsh\nfind . -maxdepth 1\n```":  "find . -maxdepth 1",
 		`{"command":"git status --short"}`: "git status --short",

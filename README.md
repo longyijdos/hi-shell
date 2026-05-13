@@ -152,12 +152,15 @@ Keyboard behavior:
 | --- | --- | --- |
 | Enter | buffer starts with `hi ` | Generate a command suggestion |
 | Enter | revise mode | Revise the suggestion with session history |
-| Enter | suggestion exists, revise mode off | Run current `BUFFER` normally |
+| Enter | ask mode | Ask a question about the current suggestion |
+| Enter | suggestion exists, edit mode | Run current `BUFFER` normally |
 | Enter | normal shell input | Run normal zsh `accept-line` |
 | Tab | suggestion visible | Accept suggestion into `BUFFER` |
 | Tab | no suggestion | Use normal zsh completion |
 | Text input | suggestion visible | Hide the ghost text and edit normally |
-| Prefix, then `r` | suggestion exists | Toggle revise mode |
+| Prefix, then `e` | suggestion exists | Switch to edit mode |
+| Prefix, then `r` | suggestion exists | Switch to revise mode |
+| Prefix, then `a` | suggestion exists | Switch to ask mode |
 | Prefix, then `q` | prefix mode | Exit prefix mode |
 
 CLI usage:
@@ -165,6 +168,7 @@ CLI usage:
 ```sh
 hi-shell generate --prompt "list go files" --format json
 hi-shell revise --session-json - --format json
+hi-shell ask --session-json - --format json
 hi-shell risk --command 'rm -rf /' --format json
 hi-shell doctor
 hi-shell version
@@ -200,6 +204,30 @@ hi-shell risk --command 'find . -name "node_modules" -type d -exec rm -rf {} +' 
       "feedback": "sort by size and show human readable sizes"
     }
   ]
+}
+```
+
+`hi-shell ask` is for integrations that keep an in-memory command question session. It answers questions about the current suggestion and does not generate a replacement command:
+
+```json
+{
+  "initial_prompt": "list large files",
+  "turns": [
+    {
+      "command": "find . -type f -size +100M",
+      "risk": "safe",
+      "warning": "",
+      "question": "will this modify files?"
+    }
+  ]
+}
+```
+
+`hi-shell ask --format json` returns:
+
+```json
+{
+  "answer": "No. This command only searches for matching files and prints their paths."
 }
 ```
 

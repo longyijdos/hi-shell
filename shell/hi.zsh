@@ -14,7 +14,7 @@ typeset -g _HI_ORIGINAL_PROMPT=""
 typeset -g _HI_SUGGESTION=""
 typeset -g _HI_RISK=""
 typeset -g _HI_WARNING=""
-typeset -g _HI_REVISING=""
+typeset -g _HI_MODE="edit"
 typeset -g _HI_ENTER_WIDGET=""
 typeset -g _HI_LINEFEED_WIDGET=""
 typeset -g _HI_TAB_WIDGET=""
@@ -24,7 +24,8 @@ typeset -g _HI_SELF_INSERT_WIDGET="_hi_original_self_insert"
 typeset -g _HI_HIGHLIGHT_DISABLED=""
 typeset -g _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=""
 typeset -gi _HI_HISTORY_FETCH_LIMIT=0
-typeset -ga _HI_TURNS=()
+typeset -ga _HI_REVISE_TURNS=()
+typeset -ga _HI_ASK_TURNS=()
 typeset -ga _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS=()
 
 autoload -Uz add-zle-hook-widget add-zsh-hook
@@ -65,13 +66,13 @@ _hi_config_get() {
 }
 
 _hi_clear_state() {
-  _hi_exit_revise_mode
+  _hi_set_mode edit
   _HI_ORIGINAL_PROMPT=""
   _HI_SUGGESTION=""
   _HI_RISK=""
   _HI_WARNING=""
-  _HI_REVISING=""
-  _HI_TURNS=()
+  _HI_REVISE_TURNS=()
+  _HI_ASK_TURNS=()
   POSTDISPLAY=""
 }
 
@@ -109,14 +110,12 @@ _hi_restore_highlighting() {
   region_highlight=()
 }
 
-_hi_enter_revise_mode() {
-  _HI_REVISING=1
-  _hi_disable_highlighting
-}
-
-_hi_exit_revise_mode() {
-  _HI_REVISING=""
-  _hi_restore_highlighting
+_hi_set_mode() {
+  _HI_MODE="$1"
+  case "$_HI_MODE" in
+    revise|ask) _hi_disable_highlighting ;;
+    *) _HI_MODE="edit"; _hi_restore_highlighting ;;
+  esac
 }
 
 _hi_show_warning() {
@@ -150,7 +149,7 @@ _hi_display_suggestion() {
   _HI_SUGGESTION="$1"
   _HI_RISK="$2"
   _HI_WARNING="$3"
-  _hi_exit_revise_mode
+  _hi_set_mode edit
 
   BUFFER=""
   CURSOR=0
@@ -192,7 +191,7 @@ _hi_turn_json() {
 
 _hi_revision_json() {
   local feedback="$1"
-  local count="${#_HI_TURNS[@]}"
+  local count="${#_HI_REVISE_TURNS[@]}"
   local i
   local wrote_turn=0
 
@@ -204,7 +203,7 @@ _hi_revision_json() {
     if (( wrote_turn )); then
       print -rn -- ','
     fi
-    print -rn -- "${_HI_TURNS[$i]}"
+    print -rn -- "${_HI_REVISE_TURNS[$i]}"
     wrote_turn=1
   done
 
@@ -213,6 +212,54 @@ _hi_revision_json() {
       print -rn -- ','
     fi
     _hi_turn_json "$_HI_SUGGESTION" "$_HI_RISK" "$_HI_WARNING" "$feedback"
+  fi
+
+  print -r -- ']}'
+}
+
+_hi_ask_turn_json() {
+  local command="$1"
+  local risk="$2"
+  local warning="$3"
+  local question="$4"
+  local answer="$5"
+
+  print -rn -- '{"command":'
+  _hi_json_string "$command"
+  print -rn -- ',"risk":'
+  _hi_json_string "$risk"
+  print -rn -- ',"warning":'
+  _hi_json_string "$warning"
+  print -rn -- ',"question":'
+  _hi_json_string "$question"
+  print -rn -- ',"answer":'
+  _hi_json_string "$answer"
+  print -rn -- '}'
+}
+
+_hi_ask_json() {
+  local question="$1"
+  local count="${#_HI_ASK_TURNS[@]}"
+  local i
+  local wrote_turn=0
+
+  print -rn -- '{"initial_prompt":'
+  _hi_json_string "$_HI_ORIGINAL_PROMPT"
+  print -rn -- ',"turns":['
+
+  for (( i = 1; i <= count; i++ )); do
+    if (( wrote_turn )); then
+      print -rn -- ','
+    fi
+    print -rn -- "${_HI_ASK_TURNS[$i]}"
+    wrote_turn=1
+  done
+
+  if [[ -n "$_HI_SUGGESTION" ]]; then
+    if (( wrote_turn )); then
+      print -rn -- ','
+    fi
+    _hi_ask_turn_json "$_HI_SUGGESTION" "$_HI_RISK" "$_HI_WARNING" "$question" ""
   fi
 
   print -r -- ']}'
@@ -271,8 +318,41 @@ _hi_revise_for_feedback() {
     return 1
   fi
 
-  _HI_TURNS+=("$(_hi_turn_json "$_HI_SUGGESTION" "$_HI_RISK" "$_HI_WARNING" "$feedback")")
+  _HI_REVISE_TURNS+=("$(_hi_turn_json "$_HI_SUGGESTION" "$_HI_RISK" "$_HI_WARNING" "$feedback")")
   _hi_display_suggestion "$command" "$risk" "$warning"
+}
+
+_hi_ask_question() {
+  local question="$1"
+  local result answer message
+
+  zle -R "hi-shell: asking..."
+
+  result="$(_hi_ask_json "$question" | _hi_run_cli ask --session-json - --format json 2>&1)"
+  if (( $? != 0 )); then
+    POSTDISPLAY=""
+    zle redisplay
+    zle -M "hi-shell: $result"
+    return 1
+  fi
+
+  answer="$(command hi-shell parse-field answer "$result" 2>/dev/null)"
+  if [[ -z "$answer" ]]; then
+    POSTDISPLAY=""
+    zle redisplay
+    zle -M "hi-shell: no answer generated"
+    return 1
+  fi
+
+  _HI_ASK_TURNS+=("$(_hi_ask_turn_json "$_HI_SUGGESTION" "$_HI_RISK" "$_HI_WARNING" "$question" "$answer")")
+  _hi_set_mode edit
+  BUFFER=""
+  CURSOR=0
+  POSTDISPLAY="$_HI_SUGGESTION"
+  zle redisplay
+
+  message="${answer//$'\n'/ }"
+  zle -M "hi-shell: $message"
 }
 
 _hi_accept_line() {
@@ -282,7 +362,7 @@ _hi_accept_line() {
     widget="$_HI_LINEFEED_WIDGET"
   fi
 
-  if [[ -n "$_HI_SUGGESTION" && -n "$_HI_REVISING" ]]; then
+  if [[ -n "$_HI_SUGGESTION" && "$_HI_MODE" == "revise" ]]; then
     local feedback="$BUFFER"
 
     if [[ -z "${feedback//[[:space:]]/}" ]]; then
@@ -292,6 +372,19 @@ _hi_accept_line() {
     fi
 
     _hi_revise_for_feedback "$feedback"
+    return
+  fi
+
+  if [[ -n "$_HI_SUGGESTION" && "$_HI_MODE" == "ask" ]]; then
+    local question="$BUFFER"
+
+    if [[ -z "${question//[[:space:]]/}" ]]; then
+      zle redisplay
+      zle -M "hi-shell: type a question or press Ctrl-C to cancel"
+      return
+    fi
+
+    _hi_ask_question "$question"
     return
   fi
 
@@ -331,24 +424,39 @@ _hi_self_insert() {
   _hi_call_widget "$_HI_SELF_INSERT_WIDGET" ".self-insert"
 }
 
-_hi_prefix_revise() {
+_hi_prefix_mode() {
+  local mode="$1"
+  local missing_message="$2"
+
   zle -K main
 
   if [[ -z "$_HI_SUGGESTION" ]]; then
     zle redisplay
-    zle -M "hi-shell: no suggestion to revise"
+    zle -M "$missing_message"
     return
   fi
 
-  if [[ -n "$_HI_REVISING" ]]; then
-    _hi_exit_revise_mode
+  if [[ "$_HI_MODE" == "$mode" ]]; then
     zle redisplay
-    zle -M "hi-shell: command edit mode"
+    zle -M "hi-shell: already in $mode mode"
     return
   fi
 
-  _hi_enter_revise_mode
-  zle -M "hi-shell: revise mode"
+  _hi_set_mode "$mode"
+  zle redisplay
+  zle -M "hi-shell: $mode mode"
+}
+
+_hi_prefix_revise() {
+  _hi_prefix_mode revise "hi-shell: no suggestion to revise"
+}
+
+_hi_prefix_edit() {
+  _hi_prefix_mode edit "hi-shell: no suggestion to edit"
+}
+
+_hi_prefix_ask() {
+  _hi_prefix_mode ask "hi-shell: no suggestion to ask about"
 }
 
 _hi_prefix_enter() {
@@ -358,7 +466,7 @@ _hi_prefix_enter() {
   fi
 
   zle -K hi-shell-prefix
-  zle -M "hi-shell: r revise, q exit"
+  zle -M "hi-shell: e edit, r revise, a ask, q exit"
 }
 
 _hi_prefix_cancel() {
@@ -386,12 +494,16 @@ zle -A self-insert "$_HI_SELF_INSERT_WIDGET"
 zle -N self-insert _hi_self_insert
 zle -N _hi_prefix_enter
 zle -N _hi_prefix_revise
+zle -N _hi_prefix_edit
+zle -N _hi_prefix_ask
 zle -N _hi_prefix_cancel
 zle -N _hi_prefix_unknown
 
 bindkey -N hi-shell-prefix
 bindkey -M hi-shell-prefix -R "^@-^?" _hi_prefix_unknown
+bindkey -M hi-shell-prefix 'e' _hi_prefix_edit
 bindkey -M hi-shell-prefix 'r' _hi_prefix_revise
+bindkey -M hi-shell-prefix 'a' _hi_prefix_ask
 bindkey -M hi-shell-prefix 'q' _hi_prefix_cancel
 
 add-zle-hook-widget zle-line-init _hi_clear_state 2>/dev/null

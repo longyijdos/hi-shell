@@ -56,6 +56,11 @@ func TestRunRejectsInvalidArguments(t *testing.T) {
 			wantStderr: "requires --command",
 		},
 		{
+			name:       "ask missing session json",
+			args:       []string{"ask"},
+			wantStderr: "requires --session-json",
+		},
+		{
 			name:       "version extra args",
 			args:       []string{"version", "extra"},
 			wantStderr: `unexpected argument "extra"`,
@@ -103,6 +108,7 @@ func TestRunSubcommandHelpReturnsZero(t *testing.T) {
 	subcommands := map[string]string{
 		"generate":      generateUsage,
 		"revise":        reviseUsage,
+		"ask":           askUsage,
 		"config":        configUsage,
 		"risk":          riskUsage,
 		"install":       installUsage,

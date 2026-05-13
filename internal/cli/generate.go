@@ -39,6 +39,6 @@ func commandGenerate(args []string, stdout, stderr io.Writer) int {
 	}
 
 	return runCommandGeneration(format, func(snapshot shellcontext.Snapshot) promptpkg.Prompt {
-		return promptpkg.Build(promptText, snapshot)
+		return promptpkg.BuildGenerate(promptText, snapshot)
 	}, stdout, stderr)
 }
