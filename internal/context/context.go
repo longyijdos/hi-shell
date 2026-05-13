@@ -28,7 +28,7 @@ type Snapshot struct {
 	RecentHistory  []string
 }
 
-func Collect(settings config.ContextConfig) Snapshot {
+func Collect(settings config.ContextConfig, historySettings config.HistoryConfig) Snapshot {
 	var snap Snapshot
 
 	wd, _ := os.Getwd()
@@ -56,7 +56,7 @@ func Collect(settings config.ContextConfig) Snapshot {
 		snap.PackageScripts = readPackageScripts(wd)
 	}
 	if settings.History {
-		snap.RecentHistory = sanitizeHistory(os.Getenv(historyEnv))
+		snap.RecentHistory = sanitizeHistory(os.Getenv(historyEnv), historySettings)
 	}
 
 	return snap

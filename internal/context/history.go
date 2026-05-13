@@ -1,12 +1,13 @@
 package shellcontext
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/longyijdos/hi-shell/internal/config"
+)
 
 const (
-	historyEnv             = "HI_SHELL_HISTORY"
-	maxHistoryEntries      = 12
-	maxHistoryCommandRunes = 240
-	maxHistoryTotalBytes   = 2000
+	historyEnv = "HI_SHELL_HISTORY"
 )
 
 var sensitiveHistoryFragments = []string{
@@ -40,24 +41,43 @@ var sensitiveHistoryFragments = []string{
 	"--passwd",
 }
 
-func sanitizeHistory(raw string) []string {
+func sanitizeHistory(raw string, settings config.HistoryConfig) []string {
+	settings = historyConfigWithDefaults(settings)
+
 	var commands []string
 	for _, line := range strings.Split(raw, "\n") {
 		command := normalizeHistoryCommand(line)
 		if command == "" || shouldDropHistoryCommand(command) {
 			continue
 		}
-		commands = append(commands, truncateHistoryCommand(command))
+		commands = append(commands, truncateHistoryCommand(command, settings.MaxCommandChars))
 	}
 
 	commands = dedupeHistoryCommands(commands)
-	if len(commands) > maxHistoryEntries {
-		commands = commands[len(commands)-maxHistoryEntries:]
+	if len(commands) > settings.MaxEntries {
+		commands = commands[len(commands)-settings.MaxEntries:]
 	}
-	for historyBytes(commands) > maxHistoryTotalBytes && len(commands) > 0 {
+	for historyBytes(commands) > settings.MaxBytes && len(commands) > 0 {
 		commands = commands[1:]
 	}
 	return commands
+}
+
+func historyConfigWithDefaults(settings config.HistoryConfig) config.HistoryConfig {
+	defaults := config.Default().History
+	if settings.FetchLimit <= 0 {
+		settings.FetchLimit = defaults.FetchLimit
+	}
+	if settings.MaxEntries <= 0 {
+		settings.MaxEntries = defaults.MaxEntries
+	}
+	if settings.MaxCommandChars <= 0 {
+		settings.MaxCommandChars = defaults.MaxCommandChars
+	}
+	if settings.MaxBytes <= 0 {
+		settings.MaxBytes = defaults.MaxBytes
+	}
+	return settings
 }
 
 func normalizeHistoryCommand(command string) string {
@@ -94,12 +114,12 @@ func shouldDropHistoryCommand(command string) bool {
 	return false
 }
 
-func truncateHistoryCommand(command string) string {
+func truncateHistoryCommand(command string, maxCommandChars int) string {
 	runes := []rune(command)
-	if len(runes) <= maxHistoryCommandRunes {
+	if len(runes) <= maxCommandChars {
 		return command
 	}
-	return strings.TrimSpace(string(runes[:maxHistoryCommandRunes])) + " ..."
+	return strings.TrimSpace(string(runes[:maxCommandChars])) + " ..."
 }
 
 func dedupeHistoryCommands(commands []string) []string {

@@ -11,12 +11,14 @@ import (
 func TestCollectHistoryRequiresSetting(t *testing.T) {
 	t.Setenv(historyEnv, "git status\nnpm test")
 
-	disabled := Collect(config.ContextConfig{})
+	historySettings := config.Default().History
+
+	disabled := Collect(config.ContextConfig{}, historySettings)
 	if len(disabled.RecentHistory) != 0 {
 		t.Fatalf("Collect() with history disabled got %#v, want none", disabled.RecentHistory)
 	}
 
-	enabled := Collect(config.ContextConfig{History: true})
+	enabled := Collect(config.ContextConfig{History: true}, historySettings)
 	want := []string{"git status", "npm test"}
 	if !reflect.DeepEqual(enabled.RecentHistory, want) {
 		t.Fatalf("Collect() history = %#v, want %#v", enabled.RecentHistory, want)
@@ -34,8 +36,42 @@ func TestSanitizeHistoryFiltersNoiseAndSecrets(t *testing.T) {
 		"",
 	}, "\n")
 
-	got := sanitizeHistory(raw)
+	got := sanitizeHistory(raw, config.Default().History)
 	want := []string{"git status", "npm test"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("sanitizeHistory() = %#v, want %#v", got, want)
+	}
+}
+
+func TestSanitizeHistoryUsesConfiguredLimits(t *testing.T) {
+	raw := strings.Join([]string{
+		"echo one",
+		"echo two",
+		"echo three",
+	}, "\n")
+	settings := config.HistoryConfig{
+		MaxEntries:      2,
+		MaxCommandChars: 8,
+		MaxBytes:        100,
+	}
+
+	got := sanitizeHistory(raw, settings)
+	want := []string{"echo two", "echo thr ..."}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("sanitizeHistory() = %#v, want %#v", got, want)
+	}
+}
+
+func TestSanitizeHistoryUsesConfiguredTotalBytes(t *testing.T) {
+	raw := strings.Join([]string{"one", "two", "three"}, "\n")
+	settings := config.HistoryConfig{
+		MaxEntries:      5,
+		MaxCommandChars: 100,
+		MaxBytes:        10,
+	}
+
+	got := sanitizeHistory(raw, settings)
+	want := []string{"three"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("sanitizeHistory() = %#v, want %#v", got, want)
 	}

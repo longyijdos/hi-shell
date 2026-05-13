@@ -12,6 +12,8 @@ func TestSaveAndLoadFile(t *testing.T) {
 	cfg.Provider = "deepseek"
 	cfg.DeepSeek.Model = "deepseek-v4-pro"
 	cfg.Keybindings.Prefix = "^O"
+	cfg.History.FetchLimit = 30
+	cfg.History.MaxEntries = 16
 
 	if err := SaveFile(path, cfg); err != nil {
 		t.Fatalf("SaveFile() error = %v", err)
@@ -30,6 +32,12 @@ func TestSaveAndLoadFile(t *testing.T) {
 	if loaded.Keybindings.Prefix != "^O" {
 		t.Fatalf("Keybindings.Prefix = %q", loaded.Keybindings.Prefix)
 	}
+	if loaded.History.FetchLimit != 30 {
+		t.Fatalf("History.FetchLimit = %d", loaded.History.FetchLimit)
+	}
+	if loaded.History.MaxEntries != 16 {
+		t.Fatalf("History.MaxEntries = %d", loaded.History.MaxEntries)
+	}
 }
 
 func TestLoadFileMissingUsesDefaults(t *testing.T) {
@@ -45,6 +53,18 @@ func TestLoadFileMissingUsesDefaults(t *testing.T) {
 	}
 	if loaded.Keybindings.Prefix != "^]" {
 		t.Fatalf("Keybindings.Prefix = %q, want ^]", loaded.Keybindings.Prefix)
+	}
+	if loaded.History.FetchLimit != 20 {
+		t.Fatalf("History.FetchLimit = %d, want 20", loaded.History.FetchLimit)
+	}
+	if loaded.History.MaxEntries != 12 {
+		t.Fatalf("History.MaxEntries = %d, want 12", loaded.History.MaxEntries)
+	}
+	if loaded.History.MaxCommandChars != 240 {
+		t.Fatalf("History.MaxCommandChars = %d, want 240", loaded.History.MaxCommandChars)
+	}
+	if loaded.History.MaxBytes != 2000 {
+		t.Fatalf("History.MaxBytes = %d, want 2000", loaded.History.MaxBytes)
 	}
 }
 
@@ -134,5 +154,41 @@ func TestSetKeybindingsPrefix(t *testing.T) {
 	}
 	if got != "^[;" {
 		t.Fatalf("Get(keybindings.prefix) = %q", got)
+	}
+}
+
+func TestSetHistoryConfig(t *testing.T) {
+	cfg := Default()
+
+	settings := map[string]string{
+		"history.fetch_limit":       "30",
+		"history.max_entries":       "16",
+		"history.max_command_chars": "120",
+		"history.max_bytes":         "1000",
+	}
+	for key, value := range settings {
+		if err := Set(&cfg, key, value); err != nil {
+			t.Fatalf("Set(%s) error = %v", key, err)
+		}
+		got, err := Get(cfg, key)
+		if err != nil {
+			t.Fatalf("Get(%s) error = %v", key, err)
+		}
+		if got != value {
+			t.Fatalf("Get(%s) = %q, want %q", key, got, value)
+		}
+	}
+
+	if cfg.History.FetchLimit != 30 {
+		t.Fatalf("History.FetchLimit = %d", cfg.History.FetchLimit)
+	}
+	if cfg.History.MaxEntries != 16 {
+		t.Fatalf("History.MaxEntries = %d", cfg.History.MaxEntries)
+	}
+	if cfg.History.MaxCommandChars != 120 {
+		t.Fatalf("History.MaxCommandChars = %d", cfg.History.MaxCommandChars)
+	}
+	if cfg.History.MaxBytes != 1000 {
+		t.Fatalf("History.MaxBytes = %d", cfg.History.MaxBytes)
 	}
 }

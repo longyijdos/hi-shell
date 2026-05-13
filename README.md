@@ -118,13 +118,19 @@ project_files = true
 package_scripts = true
 history = false
 
+[history]
+fetch_limit = 20
+max_entries = 12
+max_command_chars = 240
+max_bytes = 2000
+
 [safety]
 block_critical = true
 warn_sudo = true
 warn_destructive = true
 ```
 
-Set `context.history = true` to include a filtered snapshot of recent shell commands in generation and revision prompts. The zsh plugin passes recent history to `hi-shell` through `HI_SHELL_HISTORY`; `hi-shell` ignores it unless this setting is enabled, then drops obvious secrets, `hi`/`hi-shell` commands, duplicates, and overly long entries.
+Set `context.history = true` to include a filtered snapshot of recent shell commands in generation and revision prompts. The zsh plugin passes recent history to `hi-shell` through `HI_SHELL_HISTORY`; `hi-shell` ignores it unless this setting is enabled, then drops obvious secrets, `hi`/`hi-shell` commands, duplicates, and overly long entries. The `[history]` section controls how many commands the plugin fetches and how much filtered history Go keeps.
 
 Set `keybindings.prefix` to change the hi-shell prefix key used by the zsh plugin. The value uses zsh `bindkey` notation; the default `^]` means Ctrl-].
 

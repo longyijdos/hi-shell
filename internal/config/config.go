@@ -27,6 +27,7 @@ type Config struct {
 	OpenAI      OpenAIConfig      `toml:"openai"`
 	DeepSeek    DeepSeekConfig    `toml:"deepseek"`
 	Context     ContextConfig     `toml:"context"`
+	History     HistoryConfig     `toml:"history"`
 	Safety      SafetyConfig      `toml:"safety"`
 }
 
@@ -56,6 +57,13 @@ type ContextConfig struct {
 	ProjectFiles   bool `toml:"project_files"`
 	PackageScripts bool `toml:"package_scripts"`
 	History        bool `toml:"history"`
+}
+
+type HistoryConfig struct {
+	FetchLimit      int `toml:"fetch_limit"`
+	MaxEntries      int `toml:"max_entries"`
+	MaxCommandChars int `toml:"max_command_chars"`
+	MaxBytes        int `toml:"max_bytes"`
 }
 
 type SafetyConfig struct {
@@ -91,6 +99,12 @@ func Default() Config {
 			ProjectFiles:   true,
 			PackageScripts: true,
 			History:        false,
+		},
+		History: HistoryConfig{
+			FetchLimit:      20,
+			MaxEntries:      12,
+			MaxCommandChars: 240,
+			MaxBytes:        2000,
 		},
 		Safety: SafetyConfig{
 			BlockCritical:   true,
@@ -260,6 +274,14 @@ func Set(cfg *Config, key, value string) error {
 		return setBool(value, &cfg.Context.PackageScripts)
 	case "context.history":
 		return setBool(value, &cfg.Context.History)
+	case "history.fetch_limit":
+		return setPositiveInt(value, &cfg.History.FetchLimit, "history.fetch_limit")
+	case "history.max_entries":
+		return setPositiveInt(value, &cfg.History.MaxEntries, "history.max_entries")
+	case "history.max_command_chars":
+		return setPositiveInt(value, &cfg.History.MaxCommandChars, "history.max_command_chars")
+	case "history.max_bytes":
+		return setPositiveInt(value, &cfg.History.MaxBytes, "history.max_bytes")
 	case "safety.block_critical":
 		return setBool(value, &cfg.Safety.BlockCritical)
 	case "safety.warn_sudo":
@@ -314,6 +336,14 @@ func Get(cfg Config, key string) (string, error) {
 		return strconv.FormatBool(cfg.Context.PackageScripts), nil
 	case "context.history":
 		return strconv.FormatBool(cfg.Context.History), nil
+	case "history.fetch_limit":
+		return strconv.Itoa(cfg.History.FetchLimit), nil
+	case "history.max_entries":
+		return strconv.Itoa(cfg.History.MaxEntries), nil
+	case "history.max_command_chars":
+		return strconv.Itoa(cfg.History.MaxCommandChars), nil
+	case "history.max_bytes":
+		return strconv.Itoa(cfg.History.MaxBytes), nil
 	case "safety.block_critical":
 		return strconv.FormatBool(cfg.Safety.BlockCritical), nil
 	case "safety.warn_sudo":
@@ -334,6 +364,15 @@ func setBool(value string, target *bool) error {
 	return nil
 }
 
+func setPositiveInt(value string, target *int, name string) error {
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return fmt.Errorf("%s must be a positive integer", name)
+	}
+	*target = parsed
+	return nil
+}
+
 func applyDefaults(cfg *Config) {
 	defaults := Default()
 
@@ -346,6 +385,18 @@ func applyDefaults(cfg *Config) {
 	cfg.Keybindings.Prefix = strings.TrimSpace(cfg.Keybindings.Prefix)
 	if cfg.Keybindings.Prefix == "" {
 		cfg.Keybindings.Prefix = defaults.Keybindings.Prefix
+	}
+	if cfg.History.FetchLimit <= 0 {
+		cfg.History.FetchLimit = defaults.History.FetchLimit
+	}
+	if cfg.History.MaxEntries <= 0 {
+		cfg.History.MaxEntries = defaults.History.MaxEntries
+	}
+	if cfg.History.MaxCommandChars <= 0 {
+		cfg.History.MaxCommandChars = defaults.History.MaxCommandChars
+	}
+	if cfg.History.MaxBytes <= 0 {
+		cfg.History.MaxBytes = defaults.History.MaxBytes
 	}
 	if cfg.OpenAI.BaseURL == "" {
 		cfg.OpenAI.BaseURL = defaults.OpenAI.BaseURL

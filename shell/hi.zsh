@@ -23,7 +23,7 @@ typeset -g _HI_PREFIX_WIDGET=""
 typeset -g _HI_SELF_INSERT_WIDGET="_hi_original_self_insert"
 typeset -g _HI_HIGHLIGHT_DISABLED=""
 typeset -g _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=""
-typeset -gi _HI_HISTORY_LIMIT=20
+typeset -gi _HI_HISTORY_FETCH_LIMIT=0
 typeset -ga _HI_TURNS=()
 typeset -ga _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS=()
 
@@ -131,7 +131,7 @@ _hi_show_warning() {
 }
 
 _hi_recent_history() {
-  fc -ln "-${_HI_HISTORY_LIMIT}" 2>/dev/null
+  fc -ln "-${_HI_HISTORY_FETCH_LIMIT}" 2>/dev/null
 }
 
 _hi_run_cli() {
@@ -378,6 +378,7 @@ _HI_LINEFEED_WIDGET="$(_hi_bound_widget '^J')"
 _HI_TAB_WIDGET="$(_hi_bound_widget '^I')"
 _HI_PREFIX_KEY="$(_hi_config_get keybindings.prefix '^]')"
 _HI_PREFIX_WIDGET="$(_hi_bound_widget "$_HI_PREFIX_KEY")"
+_HI_HISTORY_FETCH_LIMIT="$(_hi_config_get history.fetch_limit 20)"
 
 zle -N _hi_accept_line
 zle -N _hi_accept_suggestion

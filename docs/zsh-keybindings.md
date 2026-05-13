@@ -53,6 +53,7 @@ The zsh plugin does not parse TOML. It calls the Go CLI:
 
 ```zsh
 _hi_config_get keybindings.prefix '^]'
+_hi_config_get history.fetch_limit 20
 ```
 
 `_hi_config_get` is a generic wrapper around:
@@ -133,4 +134,3 @@ PATH="$PWD:$PATH" HI_SHELL_HOME="$tmp" zsh -fc '
 '
 rm -rf "$tmp"
 ```
-

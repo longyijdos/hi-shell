@@ -36,7 +36,7 @@ func runCommandGeneration(outputFormat string, buildPrompt func(shellcontext.Sna
 		return 1
 	}
 
-	snapshot := shellcontext.Collect(cfg.Context)
+	snapshot := shellcontext.Collect(cfg.Context, cfg.History)
 	builtPrompt := buildPrompt(snapshot)
 	provider, model, err := providerFor(cfg)
 	if err != nil {
