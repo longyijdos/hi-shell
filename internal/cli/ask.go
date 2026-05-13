@@ -48,7 +48,13 @@ func commandAsk(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	session, err := readAskSession(sessionJSON, stdin)
+	cfg, _, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(stderr, "load config: %v\n", err)
+		return 1
+	}
+
+	session, err := readAskSession(sessionJSON, stdin, cfg.Session)
 	if err != nil {
 		fmt.Fprintf(stderr, "session-json: %v\n", err)
 		return 2
@@ -59,15 +65,15 @@ func commandAsk(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}, stdout, stderr)
 }
 
-func readAskSession(source string, stdin io.Reader) (promptpkg.AskSession, error) {
-	data, err := readSessionJSON(source, stdin)
+func readAskSession(source string, stdin io.Reader, settings config.SessionConfig) (promptpkg.AskSession, error) {
+	data, err := readSessionJSON(source, stdin, settings.MaxJSONBytes)
 	if err != nil {
 		return promptpkg.AskSession{}, err
 	}
-	return parseAskSession(data)
+	return parseAskSession(data, settings)
 }
 
-func parseAskSession(data []byte) (promptpkg.AskSession, error) {
+func parseAskSession(data []byte, settings config.SessionConfig) (promptpkg.AskSession, error) {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
 		return promptpkg.AskSession{}, fmt.Errorf("requires non-empty JSON")
@@ -84,36 +90,36 @@ func parseAskSession(data []byte) (promptpkg.AskSession, error) {
 	}
 
 	var err error
-	session.InitialPrompt, err = cleanSessionField("initial_prompt", session.InitialPrompt, true)
+	session.InitialPrompt, err = cleanSessionField("initial_prompt", session.InitialPrompt, true, settings.MaxFieldChars)
 	if err != nil {
 		return promptpkg.AskSession{}, err
 	}
 
-	if len(session.Turns) > maxSessionTurns {
-		session.Turns = session.Turns[len(session.Turns)-maxSessionTurns:]
+	if len(session.Turns) > settings.AskTurns {
+		session.Turns = session.Turns[len(session.Turns)-settings.AskTurns:]
 	}
 	if len(session.Turns) == 0 {
 		return promptpkg.AskSession{}, fmt.Errorf("turns must contain at least one command with a question")
 	}
 	for i := range session.Turns {
 		turn := &session.Turns[i]
-		turn.Command, err = cleanSessionField(fmt.Sprintf("turns[%d].command", i), turn.Command, true)
+		turn.Command, err = cleanSessionField(fmt.Sprintf("turns[%d].command", i), turn.Command, true, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.AskSession{}, err
 		}
-		turn.Risk, err = cleanSessionField(fmt.Sprintf("turns[%d].risk", i), turn.Risk, false)
+		turn.Risk, err = cleanSessionField(fmt.Sprintf("turns[%d].risk", i), turn.Risk, false, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.AskSession{}, err
 		}
-		turn.Warning, err = cleanSessionField(fmt.Sprintf("turns[%d].warning", i), turn.Warning, false)
+		turn.Warning, err = cleanSessionField(fmt.Sprintf("turns[%d].warning", i), turn.Warning, false, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.AskSession{}, err
 		}
-		turn.Question, err = cleanSessionField(fmt.Sprintf("turns[%d].question", i), turn.Question, false)
+		turn.Question, err = cleanSessionField(fmt.Sprintf("turns[%d].question", i), turn.Question, false, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.AskSession{}, err
 		}
-		turn.Answer, err = cleanSessionField(fmt.Sprintf("turns[%d].answer", i), turn.Answer, false)
+		turn.Answer, err = cleanSessionField(fmt.Sprintf("turns[%d].answer", i), turn.Answer, false, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.AskSession{}, err
 		}

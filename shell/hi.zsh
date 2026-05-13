@@ -24,6 +24,8 @@ typeset -g _HI_SELF_INSERT_WIDGET="_hi_original_self_insert"
 typeset -g _HI_HIGHLIGHT_DISABLED=""
 typeset -g _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=""
 typeset -gi _HI_HISTORY_FETCH_LIMIT=0
+typeset -gi _HI_REVISE_TURN_LIMIT=0
+typeset -gi _HI_ASK_TURN_LIMIT=0
 typeset -ga _HI_REVISE_TURNS=()
 typeset -ga _HI_ASK_TURNS=()
 typeset -ga _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS=()
@@ -189,6 +191,12 @@ _hi_turn_json() {
   print -rn -- '}'
 }
 
+_hi_trim_revise_turns() {
+  while (( _HI_REVISE_TURN_LIMIT > 0 && ${#_HI_REVISE_TURNS[@]} > _HI_REVISE_TURN_LIMIT )); do
+    shift _HI_REVISE_TURNS
+  done
+}
+
 _hi_revision_json() {
   local feedback="$1"
   local count="${#_HI_REVISE_TURNS[@]}"
@@ -235,6 +243,12 @@ _hi_ask_turn_json() {
   print -rn -- ',"answer":'
   _hi_json_string "$answer"
   print -rn -- '}'
+}
+
+_hi_trim_ask_turns() {
+  while (( _HI_ASK_TURN_LIMIT > 0 && ${#_HI_ASK_TURNS[@]} > _HI_ASK_TURN_LIMIT )); do
+    shift _HI_ASK_TURNS
+  done
 }
 
 _hi_ask_json() {
@@ -319,6 +333,7 @@ _hi_revise_for_feedback() {
   fi
 
   _HI_REVISE_TURNS+=("$(_hi_turn_json "$_HI_SUGGESTION" "$_HI_RISK" "$_HI_WARNING" "$feedback")")
+  _hi_trim_revise_turns
   _hi_display_suggestion "$command" "$risk" "$warning"
 }
 
@@ -345,6 +360,7 @@ _hi_ask_question() {
   fi
 
   _HI_ASK_TURNS+=("$(_hi_ask_turn_json "$_HI_SUGGESTION" "$_HI_RISK" "$_HI_WARNING" "$question" "$answer")")
+  _hi_trim_ask_turns
   _hi_set_mode edit
   BUFFER=""
   CURSOR=0
@@ -487,6 +503,8 @@ _HI_TAB_WIDGET="$(_hi_bound_widget '^I')"
 _HI_PREFIX_KEY="$(_hi_config_get keybindings.prefix '^]')"
 _HI_PREFIX_WIDGET="$(_hi_bound_widget "$_HI_PREFIX_KEY")"
 _HI_HISTORY_FETCH_LIMIT="$(_hi_config_get history.fetch_limit 20)"
+_HI_REVISE_TURN_LIMIT="$(_hi_config_get session.revise_turns 8)"
+_HI_ASK_TURN_LIMIT="$(_hi_config_get session.ask_turns 8)"
 
 zle -N _hi_accept_line
 zle -N _hi_accept_suggestion

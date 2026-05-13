@@ -17,6 +17,7 @@ import (
 )
 
 func TestReadAskSessionSupportsInlineStdinAndFile(t *testing.T) {
+	settings := config.Default().Session
 	raw := `{
 		"initial_prompt": " list large files ",
 		"turns": [
@@ -30,7 +31,7 @@ func TestReadAskSessionSupportsInlineStdinAndFile(t *testing.T) {
 		]
 	}`
 
-	inline, err := readAskSession(raw, nil)
+	inline, err := readAskSession(raw, nil, settings)
 	if err != nil {
 		t.Fatalf("readAskSession(inline) error = %v", err)
 	}
@@ -43,7 +44,7 @@ func TestReadAskSessionSupportsInlineStdinAndFile(t *testing.T) {
 	if inline.Turns[0].Warning != "" {
 		t.Fatalf("Warning = %q, want empty after trim", inline.Turns[0].Warning)
 	}
-	fromStdin, err := readAskSession("-", strings.NewReader(raw))
+	fromStdin, err := readAskSession("-", strings.NewReader(raw), settings)
 	if err != nil {
 		t.Fatalf("readAskSession(stdin) error = %v", err)
 	}
@@ -55,7 +56,7 @@ func TestReadAskSessionSupportsInlineStdinAndFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
 		t.Fatalf("write session fixture: %v", err)
 	}
-	fromFile, err := readAskSession("@"+path, nil)
+	fromFile, err := readAskSession("@"+path, nil, settings)
 	if err != nil {
 		t.Fatalf("readAskSession(file) error = %v", err)
 	}
@@ -65,6 +66,7 @@ func TestReadAskSessionSupportsInlineStdinAndFile(t *testing.T) {
 }
 
 func TestParseAskSessionValidation(t *testing.T) {
+	settings := config.Default().Session
 	tests := []struct {
 		name    string
 		raw     string
@@ -104,7 +106,7 @@ func TestParseAskSessionValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseAskSession([]byte(tt.raw))
+			_, err := parseAskSession([]byte(tt.raw), settings)
 			if err == nil {
 				t.Fatalf("parseAskSession() error = nil, want %q", tt.wantErr)
 			}
@@ -116,10 +118,12 @@ func TestParseAskSessionValidation(t *testing.T) {
 }
 
 func TestParseAskSessionKeepsRecentTurns(t *testing.T) {
+	settings := config.Default().Session
+	settings.AskTurns = 3
 	session := promptpkg.AskSession{
 		InitialPrompt: "list files",
 	}
-	for i := 0; i < maxSessionTurns+2; i++ {
+	for i := 0; i < settings.AskTurns+2; i++ {
 		session.Turns = append(session.Turns, promptpkg.AskTurn{
 			Command:  "ls",
 			Question: "what does this do?",
@@ -130,12 +134,12 @@ func TestParseAskSessionKeepsRecentTurns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
 	}
-	parsed, err := parseAskSession(data)
+	parsed, err := parseAskSession(data, settings)
 	if err != nil {
 		t.Fatalf("parseAskSession() error = %v", err)
 	}
-	if len(parsed.Turns) != maxSessionTurns {
-		t.Fatalf("len(Turns) = %d, want %d", len(parsed.Turns), maxSessionTurns)
+	if len(parsed.Turns) != settings.AskTurns {
+		t.Fatalf("len(Turns) = %d, want %d", len(parsed.Turns), settings.AskTurns)
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 )
 
 func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
+	settings := config.Default().Session
 	raw := `{
 		"initial_prompt": " list large files ",
 		"turns": [
@@ -29,7 +30,7 @@ func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
 		]
 	}`
 
-	inline, err := readRevisionSession(raw, nil)
+	inline, err := readRevisionSession(raw, nil, settings)
 	if err != nil {
 		t.Fatalf("readRevisionSession(inline) error = %v", err)
 	}
@@ -42,7 +43,7 @@ func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
 	if inline.Turns[0].Warning != "" {
 		t.Fatalf("Warning = %q, want empty after trim", inline.Turns[0].Warning)
 	}
-	fromStdin, err := readRevisionSession("-", strings.NewReader(raw))
+	fromStdin, err := readRevisionSession("-", strings.NewReader(raw), settings)
 	if err != nil {
 		t.Fatalf("readRevisionSession(stdin) error = %v", err)
 	}
@@ -54,7 +55,7 @@ func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
 		t.Fatalf("write session fixture: %v", err)
 	}
-	fromFile, err := readRevisionSession("@"+path, nil)
+	fromFile, err := readRevisionSession("@"+path, nil, settings)
 	if err != nil {
 		t.Fatalf("readRevisionSession(file) error = %v", err)
 	}
@@ -64,6 +65,7 @@ func TestReadRevisionSessionSupportsInlineStdinAndFile(t *testing.T) {
 }
 
 func TestParseRevisionSessionValidation(t *testing.T) {
+	settings := config.Default().Session
 	tests := []struct {
 		name    string
 		raw     string
@@ -103,7 +105,7 @@ func TestParseRevisionSessionValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseRevisionSession([]byte(tt.raw))
+			_, err := parseRevisionSession([]byte(tt.raw), settings)
 			if err == nil {
 				t.Fatalf("parseRevisionSession() error = nil, want %q", tt.wantErr)
 			}
@@ -115,10 +117,12 @@ func TestParseRevisionSessionValidation(t *testing.T) {
 }
 
 func TestParseRevisionSessionKeepsRecentTurns(t *testing.T) {
+	settings := config.Default().Session
+	settings.ReviseTurns = 3
 	session := promptpkg.ReviseSession{
 		InitialPrompt: "list files",
 	}
-	for i := 0; i < maxSessionTurns+2; i++ {
+	for i := 0; i < settings.ReviseTurns+2; i++ {
 		session.Turns = append(session.Turns, promptpkg.ReviseTurn{
 			Command:  "echo command",
 			Feedback: "feedback",
@@ -129,12 +133,12 @@ func TestParseRevisionSessionKeepsRecentTurns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
 	}
-	parsed, err := parseRevisionSession(data)
+	parsed, err := parseRevisionSession(data, settings)
 	if err != nil {
 		t.Fatalf("parseRevisionSession() error = %v", err)
 	}
-	if len(parsed.Turns) != maxSessionTurns {
-		t.Fatalf("len(Turns) = %d, want %d", len(parsed.Turns), maxSessionTurns)
+	if len(parsed.Turns) != settings.ReviseTurns {
+		t.Fatalf("len(Turns) = %d, want %d", len(parsed.Turns), settings.ReviseTurns)
 	}
 }
 

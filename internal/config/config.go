@@ -28,6 +28,7 @@ type Config struct {
 	DeepSeek    DeepSeekConfig    `toml:"deepseek"`
 	Context     ContextConfig     `toml:"context"`
 	History     HistoryConfig     `toml:"history"`
+	Session     SessionConfig     `toml:"session"`
 	Safety      SafetyConfig      `toml:"safety"`
 }
 
@@ -64,6 +65,13 @@ type HistoryConfig struct {
 	MaxEntries      int `toml:"max_entries"`
 	MaxCommandChars int `toml:"max_command_chars"`
 	MaxBytes        int `toml:"max_bytes"`
+}
+
+type SessionConfig struct {
+	ReviseTurns   int `toml:"revise_turns"`
+	AskTurns      int `toml:"ask_turns"`
+	MaxFieldChars int `toml:"max_field_chars"`
+	MaxJSONBytes  int `toml:"max_json_bytes"`
 }
 
 type SafetyConfig struct {
@@ -105,6 +113,12 @@ func Default() Config {
 			MaxEntries:      12,
 			MaxCommandChars: 240,
 			MaxBytes:        2000,
+		},
+		Session: SessionConfig{
+			ReviseTurns:   8,
+			AskTurns:      8,
+			MaxFieldChars: 4000,
+			MaxJSONBytes:  64 * 1024,
 		},
 		Safety: SafetyConfig{
 			BlockCritical:   true,
@@ -282,6 +296,14 @@ func Set(cfg *Config, key, value string) error {
 		return setPositiveInt(value, &cfg.History.MaxCommandChars, "history.max_command_chars")
 	case "history.max_bytes":
 		return setPositiveInt(value, &cfg.History.MaxBytes, "history.max_bytes")
+	case "session.revise_turns":
+		return setPositiveInt(value, &cfg.Session.ReviseTurns, "session.revise_turns")
+	case "session.ask_turns":
+		return setPositiveInt(value, &cfg.Session.AskTurns, "session.ask_turns")
+	case "session.max_field_chars":
+		return setPositiveInt(value, &cfg.Session.MaxFieldChars, "session.max_field_chars")
+	case "session.max_json_bytes":
+		return setPositiveInt(value, &cfg.Session.MaxJSONBytes, "session.max_json_bytes")
 	case "safety.block_critical":
 		return setBool(value, &cfg.Safety.BlockCritical)
 	case "safety.warn_sudo":
@@ -344,6 +366,14 @@ func Get(cfg Config, key string) (string, error) {
 		return strconv.Itoa(cfg.History.MaxCommandChars), nil
 	case "history.max_bytes":
 		return strconv.Itoa(cfg.History.MaxBytes), nil
+	case "session.revise_turns":
+		return strconv.Itoa(cfg.Session.ReviseTurns), nil
+	case "session.ask_turns":
+		return strconv.Itoa(cfg.Session.AskTurns), nil
+	case "session.max_field_chars":
+		return strconv.Itoa(cfg.Session.MaxFieldChars), nil
+	case "session.max_json_bytes":
+		return strconv.Itoa(cfg.Session.MaxJSONBytes), nil
 	case "safety.block_critical":
 		return strconv.FormatBool(cfg.Safety.BlockCritical), nil
 	case "safety.warn_sudo":
@@ -397,6 +427,18 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.History.MaxBytes <= 0 {
 		cfg.History.MaxBytes = defaults.History.MaxBytes
+	}
+	if cfg.Session.ReviseTurns <= 0 {
+		cfg.Session.ReviseTurns = defaults.Session.ReviseTurns
+	}
+	if cfg.Session.AskTurns <= 0 {
+		cfg.Session.AskTurns = defaults.Session.AskTurns
+	}
+	if cfg.Session.MaxFieldChars <= 0 {
+		cfg.Session.MaxFieldChars = defaults.Session.MaxFieldChars
+	}
+	if cfg.Session.MaxJSONBytes <= 0 {
+		cfg.Session.MaxJSONBytes = defaults.Session.MaxJSONBytes
 	}
 	if cfg.OpenAI.BaseURL == "" {
 		cfg.OpenAI.BaseURL = defaults.OpenAI.BaseURL

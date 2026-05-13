@@ -14,6 +14,8 @@ func TestSaveAndLoadFile(t *testing.T) {
 	cfg.Keybindings.Prefix = "^O"
 	cfg.History.FetchLimit = 30
 	cfg.History.MaxEntries = 16
+	cfg.Session.ReviseTurns = 6
+	cfg.Session.AskTurns = 5
 
 	if err := SaveFile(path, cfg); err != nil {
 		t.Fatalf("SaveFile() error = %v", err)
@@ -37,6 +39,12 @@ func TestSaveAndLoadFile(t *testing.T) {
 	}
 	if loaded.History.MaxEntries != 16 {
 		t.Fatalf("History.MaxEntries = %d", loaded.History.MaxEntries)
+	}
+	if loaded.Session.ReviseTurns != 6 {
+		t.Fatalf("Session.ReviseTurns = %d", loaded.Session.ReviseTurns)
+	}
+	if loaded.Session.AskTurns != 5 {
+		t.Fatalf("Session.AskTurns = %d", loaded.Session.AskTurns)
 	}
 }
 
@@ -65,6 +73,18 @@ func TestLoadFileMissingUsesDefaults(t *testing.T) {
 	}
 	if loaded.History.MaxBytes != 2000 {
 		t.Fatalf("History.MaxBytes = %d, want 2000", loaded.History.MaxBytes)
+	}
+	if loaded.Session.ReviseTurns != 8 {
+		t.Fatalf("Session.ReviseTurns = %d, want 8", loaded.Session.ReviseTurns)
+	}
+	if loaded.Session.AskTurns != 8 {
+		t.Fatalf("Session.AskTurns = %d, want 8", loaded.Session.AskTurns)
+	}
+	if loaded.Session.MaxFieldChars != 4000 {
+		t.Fatalf("Session.MaxFieldChars = %d, want 4000", loaded.Session.MaxFieldChars)
+	}
+	if loaded.Session.MaxJSONBytes != 64*1024 {
+		t.Fatalf("Session.MaxJSONBytes = %d, want %d", loaded.Session.MaxJSONBytes, 64*1024)
 	}
 }
 
@@ -190,5 +210,41 @@ func TestSetHistoryConfig(t *testing.T) {
 	}
 	if cfg.History.MaxBytes != 1000 {
 		t.Fatalf("History.MaxBytes = %d", cfg.History.MaxBytes)
+	}
+}
+
+func TestSetSessionConfig(t *testing.T) {
+	cfg := Default()
+
+	settings := map[string]string{
+		"session.revise_turns":    "6",
+		"session.ask_turns":       "5",
+		"session.max_field_chars": "1000",
+		"session.max_json_bytes":  "32000",
+	}
+	for key, value := range settings {
+		if err := Set(&cfg, key, value); err != nil {
+			t.Fatalf("Set(%s) error = %v", key, err)
+		}
+		got, err := Get(cfg, key)
+		if err != nil {
+			t.Fatalf("Get(%s) error = %v", key, err)
+		}
+		if got != value {
+			t.Fatalf("Get(%s) = %q, want %q", key, got, value)
+		}
+	}
+
+	if cfg.Session.ReviseTurns != 6 {
+		t.Fatalf("Session.ReviseTurns = %d", cfg.Session.ReviseTurns)
+	}
+	if cfg.Session.AskTurns != 5 {
+		t.Fatalf("Session.AskTurns = %d", cfg.Session.AskTurns)
+	}
+	if cfg.Session.MaxFieldChars != 1000 {
+		t.Fatalf("Session.MaxFieldChars = %d", cfg.Session.MaxFieldChars)
+	}
+	if cfg.Session.MaxJSONBytes != 32000 {
+		t.Fatalf("Session.MaxJSONBytes = %d", cfg.Session.MaxJSONBytes)
 	}
 }

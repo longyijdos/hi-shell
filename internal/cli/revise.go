@@ -8,14 +8,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/longyijdos/hi-shell/internal/config"
 	shellcontext "github.com/longyijdos/hi-shell/internal/context"
 	promptpkg "github.com/longyijdos/hi-shell/internal/prompt"
-)
-
-const (
-	maxSessionJSONBytes  = 64 * 1024
-	maxSessionTurns      = 8
-	maxSessionFieldRunes = 4000
 )
 
 func commandRevise(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -47,7 +42,13 @@ func commandRevise(args []string, stdin io.Reader, stdout, stderr io.Writer) int
 		return 2
 	}
 
-	session, err := readRevisionSession(sessionJSON, stdin)
+	cfg, _, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(stderr, "load config: %v\n", err)
+		return 1
+	}
+
+	session, err := readRevisionSession(sessionJSON, stdin, cfg.Session)
 	if err != nil {
 		fmt.Fprintf(stderr, "session-json: %v\n", err)
 		return 2
@@ -58,30 +59,16 @@ func commandRevise(args []string, stdin io.Reader, stdout, stderr io.Writer) int
 	}, stdout, stderr)
 }
 
-func readRevisionSession(source string, stdin io.Reader) (promptpkg.ReviseSession, error) {
-	data, err := readSessionJSON(source, stdin)
+func readRevisionSession(source string, stdin io.Reader, settings config.SessionConfig) (promptpkg.ReviseSession, error) {
+	data, err := readSessionJSON(source, stdin, settings.MaxJSONBytes)
 	if err != nil {
 		return promptpkg.ReviseSession{}, err
 	}
 
-	return parseRevisionSession(data)
+	return parseRevisionSession(data, settings)
 }
 
-func readLimited(reader io.Reader, maxBytes int64) ([]byte, error) {
-	if reader == nil {
-		return nil, fmt.Errorf("input is unavailable")
-	}
-	data, err := io.ReadAll(io.LimitReader(reader, maxBytes+1))
-	if err != nil {
-		return nil, err
-	}
-	if int64(len(data)) > maxBytes {
-		return nil, fmt.Errorf("JSON exceeds %d bytes", maxBytes)
-	}
-	return data, nil
-}
-
-func parseRevisionSession(data []byte) (promptpkg.ReviseSession, error) {
+func parseRevisionSession(data []byte, settings config.SessionConfig) (promptpkg.ReviseSession, error) {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
 		return promptpkg.ReviseSession{}, fmt.Errorf("requires non-empty JSON")
@@ -98,32 +85,32 @@ func parseRevisionSession(data []byte) (promptpkg.ReviseSession, error) {
 	}
 
 	var err error
-	session.InitialPrompt, err = cleanSessionField("initial_prompt", session.InitialPrompt, true)
+	session.InitialPrompt, err = cleanSessionField("initial_prompt", session.InitialPrompt, true, settings.MaxFieldChars)
 	if err != nil {
 		return promptpkg.ReviseSession{}, err
 	}
 
-	if len(session.Turns) > maxSessionTurns {
-		session.Turns = session.Turns[len(session.Turns)-maxSessionTurns:]
+	if len(session.Turns) > settings.ReviseTurns {
+		session.Turns = session.Turns[len(session.Turns)-settings.ReviseTurns:]
 	}
 	if len(session.Turns) == 0 {
 		return promptpkg.ReviseSession{}, fmt.Errorf("turns must contain at least one command with feedback")
 	}
 	for i := range session.Turns {
 		turn := &session.Turns[i]
-		turn.Command, err = cleanSessionField(fmt.Sprintf("turns[%d].command", i), turn.Command, true)
+		turn.Command, err = cleanSessionField(fmt.Sprintf("turns[%d].command", i), turn.Command, true, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.ReviseSession{}, err
 		}
-		turn.Risk, err = cleanSessionField(fmt.Sprintf("turns[%d].risk", i), turn.Risk, false)
+		turn.Risk, err = cleanSessionField(fmt.Sprintf("turns[%d].risk", i), turn.Risk, false, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.ReviseSession{}, err
 		}
-		turn.Warning, err = cleanSessionField(fmt.Sprintf("turns[%d].warning", i), turn.Warning, false)
+		turn.Warning, err = cleanSessionField(fmt.Sprintf("turns[%d].warning", i), turn.Warning, false, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.ReviseSession{}, err
 		}
-		turn.Feedback, err = cleanSessionField(fmt.Sprintf("turns[%d].feedback", i), turn.Feedback, false)
+		turn.Feedback, err = cleanSessionField(fmt.Sprintf("turns[%d].feedback", i), turn.Feedback, false, settings.MaxFieldChars)
 		if err != nil {
 			return promptpkg.ReviseSession{}, err
 		}
@@ -136,13 +123,13 @@ func parseRevisionSession(data []byte) (promptpkg.ReviseSession, error) {
 	return session, nil
 }
 
-func cleanSessionField(name, value string, required bool) (string, error) {
+func cleanSessionField(name, value string, required bool, maxFieldChars int) (string, error) {
 	value = strings.TrimSpace(value)
 	if required && value == "" {
 		return "", fmt.Errorf("%s is required", name)
 	}
-	if utf8.RuneCountInString(value) > maxSessionFieldRunes {
-		return "", fmt.Errorf("%s exceeds %d characters", name, maxSessionFieldRunes)
+	if utf8.RuneCountInString(value) > maxFieldChars {
+		return "", fmt.Errorf("%s exceeds %d characters", name, maxFieldChars)
 	}
 	return value, nil
 }

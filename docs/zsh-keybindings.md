@@ -57,6 +57,8 @@ The zsh plugin does not parse TOML. It calls the Go CLI:
 ```zsh
 _hi_config_get keybindings.prefix '^]'
 _hi_config_get history.fetch_limit 20
+_hi_config_get session.revise_turns 8
+_hi_config_get session.ask_turns 8
 ```
 
 `_hi_config_get` is a generic wrapper around:
@@ -97,7 +99,7 @@ Revise mode is entered with prefix then `r`. While revise mode is active:
 - An empty feedback buffer shows a message instead of calling the LLM.
 - Ctrl-C remains the normal zsh way to abandon the current line.
 
-The plugin keeps the in-memory revision session as JSON strings in `_HI_REVISE_TURNS`. The Go CLI validates and limits the session data before using it in prompts.
+The plugin keeps the in-memory revision session as JSON strings in `_HI_REVISE_TURNS`. It trims old entries using `session.revise_turns`. The Go CLI validates and limits the session data before using it in prompts.
 
 ## Ask Flow
 
@@ -109,7 +111,7 @@ Ask mode is entered with prefix then `a`. While ask mode is active:
 - Ask history is separate from revision history and is cleared with the current hi-shell session state.
 - An empty question buffer shows a message instead of calling the LLM.
 
-The plugin keeps the in-memory ask session as JSON strings in `_HI_ASK_TURNS`. The Go CLI validates and limits the session data before using it in prompts.
+The plugin keeps the in-memory ask session as JSON strings in `_HI_ASK_TURNS`. It trims old entries using `session.ask_turns`. The Go CLI validates and limits the session data before using it in prompts.
 
 ## Extension Rules
 
