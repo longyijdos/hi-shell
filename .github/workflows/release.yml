@@ -28,11 +28,7 @@ jobs:
           sudo apt-get install -y zsh
 
       - name: Test
-        run: |
-          go test ./...
-          go vet ./...
-          zsh -n shell/hi.zsh
-          sh -n scripts/install.sh
+        run: ./scripts/check.sh
 
       - name: Build release archives
         env:

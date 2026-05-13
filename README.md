@@ -272,11 +272,16 @@ exec zsh
 ## Development
 
 ```sh
-go test ./...
-go vet ./...
+make check
 go build -o hi-shell ./cmd/hi-shell
-zsh -n shell/hi.zsh
-sh -n scripts/install.sh
+```
+
+`make check` runs tests, vet, and shell script syntax checks. CI runs the same checks on push and pull request.
+
+Optional: install the local pre-commit hook to run `make check` before each commit:
+
+```sh
+make install-hooks
 ```
 
 Test the plugin without touching `~/.zshrc`:
