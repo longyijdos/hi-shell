@@ -21,12 +21,13 @@ const (
 var ErrSecretNotStored = errors.New("hi-shell does not store API keys in config; set the provider API key environment variable instead")
 
 type Config struct {
-	Provider  string         `toml:"provider"`
-	TimeoutMS int            `toml:"timeout_ms"`
-	OpenAI    OpenAIConfig   `toml:"openai"`
-	DeepSeek  DeepSeekConfig `toml:"deepseek"`
-	Context   ContextConfig  `toml:"context"`
-	Safety    SafetyConfig   `toml:"safety"`
+	Provider    string            `toml:"provider"`
+	TimeoutMS   int               `toml:"timeout_ms"`
+	Keybindings KeybindingsConfig `toml:"keybindings"`
+	OpenAI      OpenAIConfig      `toml:"openai"`
+	DeepSeek    DeepSeekConfig    `toml:"deepseek"`
+	Context     ContextConfig     `toml:"context"`
+	Safety      SafetyConfig      `toml:"safety"`
 }
 
 type OpenAIConfig struct {
@@ -41,6 +42,10 @@ type DeepSeekConfig struct {
 	Model     string `toml:"model"`
 	Thinking  string `toml:"thinking"`
 	MaxTokens int    `toml:"max_tokens"`
+}
+
+type KeybindingsConfig struct {
+	Prefix string `toml:"prefix"`
 }
 
 type ContextConfig struct {
@@ -63,6 +68,9 @@ func Default() Config {
 	return Config{
 		Provider:  "openai",
 		TimeoutMS: 5000,
+		Keybindings: KeybindingsConfig{
+			Prefix: "^]",
+		},
 		OpenAI: OpenAIConfig{
 			BaseURL:   "https://api.openai.com/v1",
 			APIKeyEnv: "OPENAI_API_KEY",
@@ -233,6 +241,11 @@ func Set(cfg *Config, key, value string) error {
 			return fmt.Errorf("deepseek.max_tokens must be a positive integer")
 		}
 		cfg.DeepSeek.MaxTokens = maxTokens
+	case "keybindings.prefix":
+		if value == "" {
+			return fmt.Errorf("keybindings.prefix must be non-empty")
+		}
+		cfg.Keybindings.Prefix = value
 	case "context.pwd":
 		return setBool(value, &cfg.Context.PWD)
 	case "context.os":
@@ -285,6 +298,8 @@ func Get(cfg Config, key string) (string, error) {
 		return cfg.DeepSeek.Thinking, nil
 	case "deepseek.max_tokens":
 		return strconv.Itoa(cfg.DeepSeek.MaxTokens), nil
+	case "keybindings.prefix":
+		return cfg.Keybindings.Prefix, nil
 	case "context.pwd":
 		return strconv.FormatBool(cfg.Context.PWD), nil
 	case "context.os":
@@ -327,6 +342,10 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.TimeoutMS <= 0 {
 		cfg.TimeoutMS = defaults.TimeoutMS
+	}
+	cfg.Keybindings.Prefix = strings.TrimSpace(cfg.Keybindings.Prefix)
+	if cfg.Keybindings.Prefix == "" {
+		cfg.Keybindings.Prefix = defaults.Keybindings.Prefix
 	}
 	if cfg.OpenAI.BaseURL == "" {
 		cfg.OpenAI.BaseURL = defaults.OpenAI.BaseURL

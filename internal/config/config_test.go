@@ -11,6 +11,7 @@ func TestSaveAndLoadFile(t *testing.T) {
 	cfg := Default()
 	cfg.Provider = "deepseek"
 	cfg.DeepSeek.Model = "deepseek-v4-pro"
+	cfg.Keybindings.Prefix = "^O"
 
 	if err := SaveFile(path, cfg); err != nil {
 		t.Fatalf("SaveFile() error = %v", err)
@@ -26,6 +27,9 @@ func TestSaveAndLoadFile(t *testing.T) {
 	if loaded.DeepSeek.Model != "deepseek-v4-pro" {
 		t.Fatalf("DeepSeek.Model = %q", loaded.DeepSeek.Model)
 	}
+	if loaded.Keybindings.Prefix != "^O" {
+		t.Fatalf("Keybindings.Prefix = %q", loaded.Keybindings.Prefix)
+	}
 }
 
 func TestLoadFileMissingUsesDefaults(t *testing.T) {
@@ -38,6 +42,9 @@ func TestLoadFileMissingUsesDefaults(t *testing.T) {
 	}
 	if loaded.DeepSeek.Thinking != "disabled" {
 		t.Fatalf("DeepSeek.Thinking = %q, want disabled", loaded.DeepSeek.Thinking)
+	}
+	if loaded.Keybindings.Prefix != "^]" {
+		t.Fatalf("Keybindings.Prefix = %q, want ^]", loaded.Keybindings.Prefix)
 	}
 }
 
@@ -108,5 +115,24 @@ func TestSetOpenAIModel(t *testing.T) {
 	}
 	if got != "gpt-4.1" {
 		t.Fatalf("Get(openai.model) = %q", got)
+	}
+}
+
+func TestSetKeybindingsPrefix(t *testing.T) {
+	cfg := Default()
+
+	if err := Set(&cfg, "keybindings.prefix", "^[;"); err != nil {
+		t.Fatalf("Set(keybindings.prefix) error = %v", err)
+	}
+	if cfg.Keybindings.Prefix != "^[;" {
+		t.Fatalf("Keybindings.Prefix = %q", cfg.Keybindings.Prefix)
+	}
+
+	got, err := Get(cfg, "keybindings.prefix")
+	if err != nil {
+		t.Fatalf("Get(keybindings.prefix) error = %v", err)
+	}
+	if got != "^[;" {
+		t.Fatalf("Get(keybindings.prefix) = %q", got)
 	}
 }

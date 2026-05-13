@@ -18,8 +18,8 @@ typeset -g _HI_REVISING=""
 typeset -g _HI_ENTER_WIDGET=""
 typeset -g _HI_LINEFEED_WIDGET=""
 typeset -g _HI_TAB_WIDGET=""
-typeset -g _HI_REVISE_WIDGET=""
-typeset -g _HI_CANCEL_WIDGET=""
+typeset -g _HI_PREFIX_KEY=""
+typeset -g _HI_PREFIX_WIDGET=""
 typeset -g _HI_SELF_INSERT_WIDGET="_hi_original_self_insert"
 typeset -g _HI_HIGHLIGHT_DISABLED=""
 typeset -g _HI_ZSH_HIGHLIGHT_HIGHLIGHTERS_SET=""
@@ -40,11 +40,28 @@ _hi_call_widget() {
   local fallback="$2"
 
   case "$widget" in
-    ""|_hi_accept_line|_hi_accept_suggestion|_hi_revise_mode|_hi_cancel|_hi_self_insert) ;;
+    ""|_hi_accept_line|_hi_accept_suggestion|_hi_prefix_*|_hi_self_insert) ;;
     *) zle "$widget" 2>/dev/null && return ;;
   esac
 
   zle "$fallback"
+}
+
+_hi_config_get() {
+  local key="$1"
+  local default_value="$2"
+  local value
+
+  if command -v hi-shell >/dev/null 2>&1; then
+    value="$(command hi-shell config get "$key" 2>/dev/null)"
+  fi
+  value="${value//$'\n'/}"
+
+  if [[ -z "$value" ]]; then
+    value="$default_value"
+  fi
+
+  print -r -- "$value"
 }
 
 _hi_clear_state() {
@@ -102,11 +119,7 @@ _hi_exit_revise_mode() {
   _hi_restore_highlighting
 }
 
-_hi_show_status() {
-  zle -R "$1"
-}
-
-_hi_show_no_command() {
+_hi_show_warning() {
   local warning="$1"
 
   zle redisplay
@@ -210,7 +223,7 @@ _hi_generate_for_prompt() {
   local result command risk warning
 
   _hi_clear_state
-  _hi_show_status "hi-shell: generating..."
+  zle -R "hi-shell: generating..."
 
   result="$(_hi_run_cli generate --prompt "$query" --format json 2>&1)"
   if (( $? != 0 )); then
@@ -226,7 +239,7 @@ _hi_generate_for_prompt() {
 
   if [[ -z "$command" ]]; then
     _hi_clear_state
-    _hi_show_no_command "$warning"
+    _hi_show_warning "$warning"
     return 1
   fi
 
@@ -238,7 +251,7 @@ _hi_revise_for_feedback() {
   local feedback="$1"
   local result command risk warning
 
-  _hi_show_status "hi-shell: revising..."
+  zle -R "hi-shell: revising..."
 
   result="$(_hi_revision_json "$feedback" | _hi_run_cli revise --session-json - --format json 2>&1)"
   if (( $? != 0 )); then
@@ -254,7 +267,7 @@ _hi_revise_for_feedback() {
 
   if [[ -z "$command" ]]; then
     POSTDISPLAY=""
-    _hi_show_no_command "$warning"
+    _hi_show_warning "$warning"
     return 1
   fi
 
@@ -274,7 +287,7 @@ _hi_accept_line() {
 
     if [[ -z "${feedback//[[:space:]]/}" ]]; then
       zle redisplay
-      zle -M "hi-shell: type feedback or press Ctrl-G to cancel"
+      zle -M "hi-shell: type feedback or press Ctrl-C to cancel"
       return
     fi
 
@@ -318,9 +331,12 @@ _hi_self_insert() {
   _hi_call_widget "$_HI_SELF_INSERT_WIDGET" ".self-insert"
 }
 
-_hi_revise_mode() {
+_hi_prefix_revise() {
+  zle -K main
+
   if [[ -z "$_HI_SUGGESTION" ]]; then
-    _hi_call_widget "$_HI_REVISE_WIDGET" ".undefined-key"
+    zle redisplay
+    zle -M "hi-shell: no suggestion to revise"
     return
   fi
 
@@ -335,30 +351,47 @@ _hi_revise_mode() {
   zle -M "hi-shell: revise mode"
 }
 
-_hi_cancel() {
-  if [[ -n "$_HI_SUGGESTION" ]]; then
-    BUFFER=""
-    CURSOR=0
-    _hi_clear_state
-    zle redisplay
+_hi_prefix_enter() {
+  if [[ -z "$_HI_SUGGESTION" ]]; then
+    _hi_call_widget "$_HI_PREFIX_WIDGET" ".undefined-key"
     return
   fi
 
-  _hi_call_widget "$_HI_CANCEL_WIDGET" ".send-break"
+  zle -K hi-shell-prefix
+  zle -M "hi-shell: r revise, q exit"
+}
+
+_hi_prefix_cancel() {
+  zle -K main
+  zle redisplay
+  zle -M ""
+}
+
+_hi_prefix_unknown() {
+  zle -K main
+  zle redisplay
+  zle -M "hi-shell: unknown prefix key"
 }
 
 _HI_ENTER_WIDGET="$(_hi_bound_widget '^M')"
 _HI_LINEFEED_WIDGET="$(_hi_bound_widget '^J')"
 _HI_TAB_WIDGET="$(_hi_bound_widget '^I')"
-_HI_REVISE_WIDGET="$(_hi_bound_widget '^X')"
-_HI_CANCEL_WIDGET="$(_hi_bound_widget '^G')"
+_HI_PREFIX_KEY="$(_hi_config_get keybindings.prefix '^]')"
+_HI_PREFIX_WIDGET="$(_hi_bound_widget "$_HI_PREFIX_KEY")"
 
 zle -N _hi_accept_line
 zle -N _hi_accept_suggestion
 zle -A self-insert "$_HI_SELF_INSERT_WIDGET"
 zle -N self-insert _hi_self_insert
-zle -N _hi_revise_mode
-zle -N _hi_cancel
+zle -N _hi_prefix_enter
+zle -N _hi_prefix_revise
+zle -N _hi_prefix_cancel
+zle -N _hi_prefix_unknown
+
+bindkey -N hi-shell-prefix
+bindkey -M hi-shell-prefix -R "^@-^?" _hi_prefix_unknown
+bindkey -M hi-shell-prefix 'r' _hi_prefix_revise
+bindkey -M hi-shell-prefix 'q' _hi_prefix_cancel
 
 add-zle-hook-widget zle-line-init _hi_clear_state 2>/dev/null
 add-zle-hook-widget zle-line-finish _hi_clear_state 2>/dev/null
@@ -367,5 +400,4 @@ add-zsh-hook precmd _hi_clear_state 2>/dev/null
 bindkey '^M' _hi_accept_line
 bindkey '^J' _hi_accept_line
 bindkey '^I' _hi_accept_suggestion
-bindkey '^X' _hi_revise_mode
-bindkey '^G' _hi_cancel
+bindkey "$_HI_PREFIX_KEY" _hi_prefix_enter

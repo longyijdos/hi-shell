@@ -106,6 +106,9 @@ model = "deepseek-v4-flash"
 thinking = "disabled"
 max_tokens = 256
 
+[keybindings]
+prefix = "^]"
+
 [context]
 pwd = true
 os = true
@@ -122,6 +125,8 @@ warn_destructive = true
 ```
 
 Set `context.history = true` to include a filtered snapshot of recent shell commands in generation and revision prompts. The zsh plugin passes recent history to `hi-shell` through `HI_SHELL_HISTORY`; `hi-shell` ignores it unless this setting is enabled, then drops obvious secrets, `hi`/`hi-shell` commands, duplicates, and overly long entries.
+
+Set `keybindings.prefix` to change the hi-shell prefix key used by the zsh plugin. The value uses zsh `bindkey` notation; the default `^]` means Ctrl-].
 
 ## Usage
 
@@ -146,8 +151,8 @@ Keyboard behavior:
 | Tab | suggestion visible | Accept suggestion into `BUFFER` |
 | Tab | no suggestion | Use normal zsh completion |
 | Text input | suggestion visible | Hide the ghost text and edit normally |
-| Ctrl-X | suggestion exists | Toggle revise mode |
-| Ctrl-G | any state | Cancel transient state |
+| Prefix, then `r` | suggestion exists | Toggle revise mode |
+| Prefix, then `q` | prefix mode | Exit prefix mode |
 
 CLI usage:
 
