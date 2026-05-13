@@ -4,4 +4,6 @@ set -eu
 go test ./...
 go vet ./...
 zsh -n shell/hi.zsh
-sh -n scripts/install.sh
+for script in scripts/*.sh; do
+  sh -n "$script"
+done

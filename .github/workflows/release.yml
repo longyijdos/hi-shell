@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -68,6 +70,11 @@ jobs:
             sha256sum *.tar.gz > checksums.txt
           )
 
+      - name: Generate release notes
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: ./scripts/release-notes.sh "$VERSION" dist/release-notes.md
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -77,4 +84,4 @@ jobs:
             dist/*.tar.gz \
             dist/checksums.txt \
             --title "$VERSION" \
-            --notes "Release $VERSION"
+            --notes-file dist/release-notes.md
