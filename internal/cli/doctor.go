@@ -43,7 +43,7 @@ func commandDoctor(args []string, stdout, stderr io.Writer, version string) int 
 		return 1
 	}
 
-	check("provider", cfg.Provider == "openai" || cfg.Provider == "deepseek" || cfg.Provider == "openai-compatible", cfg.Provider)
+	check("provider", cfg.Provider == "openai" || cfg.Provider == "deepseek" || cfg.Provider == "claude" || cfg.Provider == "openai-compatible", cfg.Provider)
 	switch strings.ToLower(cfg.Provider) {
 	case "openai", "openai-compatible":
 		apiKeyReady := cfg.OpenAI.APIKeyEnv == "" || os.Getenv(cfg.OpenAI.APIKeyEnv) != "" || !strings.Contains(cfg.OpenAI.BaseURL, "api.openai.com")
@@ -59,6 +59,16 @@ func commandDoctor(args []string, stdout, stderr io.Writer, version string) int 
 			detail += " via $" + cfg.DeepSeek.APIKeyEnv
 		}
 		check("deepseek", apiKeyReady, detail)
+	case "claude":
+		apiKeyReady := cfg.Claude.APIKeyEnv == "" || os.Getenv(cfg.Claude.APIKeyEnv) != "" || !strings.Contains(cfg.Claude.BaseURL, "api.anthropic.com")
+		detail := cfg.Claude.BaseURL + ", model=" + cfg.Claude.Model + ", thinking=" + cfg.Claude.Thinking
+		if cfg.Claude.Thinking == "enabled" {
+			detail += ", budget_tokens=" + fmt.Sprint(cfg.Claude.ThinkingBudgetTokens)
+		}
+		if cfg.Claude.APIKeyEnv != "" {
+			detail += " via $" + cfg.Claude.APIKeyEnv
+		}
+		check("claude", apiKeyReady, detail)
 	}
 
 	hiHome, err := config.HomeDir()

@@ -112,7 +112,15 @@ func providerFor(cfg config.Config) (llm.Provider, string, error) {
 			Thinking:  cfg.DeepSeek.Thinking,
 			MaxTokens: cfg.DeepSeek.MaxTokens,
 		}, cfg.DeepSeek.Model, nil
+	case "claude":
+		return llm.ClaudeProvider{
+			BaseURL:              cfg.Claude.BaseURL,
+			APIKeyEnv:            cfg.Claude.APIKeyEnv,
+			MaxTokens:            cfg.Claude.MaxTokens,
+			Thinking:             cfg.Claude.Thinking,
+			ThinkingBudgetTokens: cfg.Claude.ThinkingBudgetTokens,
+		}, cfg.Claude.Model, nil
 	default:
-		return nil, "", fmt.Errorf("unsupported provider %q; use openai, openai-compatible, or deepseek", cfg.Provider)
+		return nil, "", fmt.Errorf("unsupported provider %q; use openai, openai-compatible, deepseek, or claude", cfg.Provider)
 	}
 }

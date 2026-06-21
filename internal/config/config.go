@@ -26,6 +26,7 @@ type Config struct {
 	Keybindings KeybindingsConfig `toml:"keybindings"`
 	OpenAI      OpenAIConfig      `toml:"openai"`
 	DeepSeek    DeepSeekConfig    `toml:"deepseek"`
+	Claude      ClaudeConfig      `toml:"claude"`
 	Context     ContextConfig     `toml:"context"`
 	History     HistoryConfig     `toml:"history"`
 	Session     SessionConfig     `toml:"session"`
@@ -44,6 +45,15 @@ type DeepSeekConfig struct {
 	Model     string `toml:"model"`
 	Thinking  string `toml:"thinking"`
 	MaxTokens int    `toml:"max_tokens"`
+}
+
+type ClaudeConfig struct {
+	BaseURL              string `toml:"base_url"`
+	APIKeyEnv            string `toml:"api_key_env"`
+	Model                string `toml:"model"`
+	MaxTokens            int    `toml:"max_tokens"`
+	Thinking             string `toml:"thinking"`
+	ThinkingBudgetTokens int    `toml:"thinking_budget_tokens"`
 }
 
 type KeybindingsConfig struct {
@@ -98,6 +108,14 @@ func Default() Config {
 			Model:     "deepseek-v4-flash",
 			Thinking:  "disabled",
 			MaxTokens: 256,
+		},
+		Claude: ClaudeConfig{
+			BaseURL:              "https://api.anthropic.com",
+			APIKeyEnv:            "ANTHROPIC_API_KEY",
+			Model:                "claude-haiku-4-5",
+			MaxTokens:            256,
+			Thinking:             "disabled",
+			ThinkingBudgetTokens: 1024,
 		},
 		Context: ContextConfig{
 			PWD:            true,
@@ -269,6 +287,29 @@ func Set(cfg *Config, key, value string) error {
 			return fmt.Errorf("deepseek.max_tokens must be a positive integer")
 		}
 		cfg.DeepSeek.MaxTokens = maxTokens
+	case "claude.base_url":
+		cfg.Claude.BaseURL = value
+	case "claude.api_key_env":
+		cfg.Claude.APIKeyEnv = value
+	case "claude.model":
+		cfg.Claude.Model = value
+	case "claude.max_tokens":
+		maxTokens, err := strconv.Atoi(value)
+		if err != nil || maxTokens <= 0 {
+			return fmt.Errorf("claude.max_tokens must be a positive integer")
+		}
+		cfg.Claude.MaxTokens = maxTokens
+	case "claude.thinking":
+		if value != "disabled" && value != "enabled" && value != "adaptive" {
+			return fmt.Errorf("claude.thinking must be disabled, enabled, or adaptive")
+		}
+		cfg.Claude.Thinking = value
+	case "claude.thinking_budget_tokens":
+		thinkingBudgetTokens, err := strconv.Atoi(value)
+		if err != nil || thinkingBudgetTokens <= 0 {
+			return fmt.Errorf("claude.thinking_budget_tokens must be a positive integer")
+		}
+		cfg.Claude.ThinkingBudgetTokens = thinkingBudgetTokens
 	case "keybindings.prefix":
 		if value == "" {
 			return fmt.Errorf("keybindings.prefix must be non-empty")
@@ -342,6 +383,18 @@ func Get(cfg Config, key string) (string, error) {
 		return cfg.DeepSeek.Thinking, nil
 	case "deepseek.max_tokens":
 		return strconv.Itoa(cfg.DeepSeek.MaxTokens), nil
+	case "claude.base_url":
+		return cfg.Claude.BaseURL, nil
+	case "claude.api_key_env":
+		return cfg.Claude.APIKeyEnv, nil
+	case "claude.model":
+		return cfg.Claude.Model, nil
+	case "claude.max_tokens":
+		return strconv.Itoa(cfg.Claude.MaxTokens), nil
+	case "claude.thinking":
+		return cfg.Claude.Thinking, nil
+	case "claude.thinking_budget_tokens":
+		return strconv.Itoa(cfg.Claude.ThinkingBudgetTokens), nil
 	case "keybindings.prefix":
 		return cfg.Keybindings.Prefix, nil
 	case "context.pwd":
@@ -463,5 +516,23 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.DeepSeek.MaxTokens <= 0 {
 		cfg.DeepSeek.MaxTokens = defaults.DeepSeek.MaxTokens
+	}
+	if cfg.Claude.BaseURL == "" {
+		cfg.Claude.BaseURL = defaults.Claude.BaseURL
+	}
+	if cfg.Claude.APIKeyEnv == "" {
+		cfg.Claude.APIKeyEnv = defaults.Claude.APIKeyEnv
+	}
+	if cfg.Claude.Model == "" {
+		cfg.Claude.Model = defaults.Claude.Model
+	}
+	if cfg.Claude.MaxTokens <= 0 {
+		cfg.Claude.MaxTokens = defaults.Claude.MaxTokens
+	}
+	if cfg.Claude.Thinking == "" {
+		cfg.Claude.Thinking = defaults.Claude.Thinking
+	}
+	if cfg.Claude.ThinkingBudgetTokens <= 0 {
+		cfg.Claude.ThinkingBudgetTokens = defaults.Claude.ThinkingBudgetTokens
 	}
 }

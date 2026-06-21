@@ -30,6 +30,28 @@ hi-shell config set deepseek.api_key_env DEEPSEEK_API_KEY
 hi-shell config set deepseek.model deepseek-v4-flash
 ```
 
+Claude uses its native Messages API:
+
+```sh
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+hi-shell config set provider claude
+hi-shell config set claude.api_key_env ANTHROPIC_API_KEY
+hi-shell config set claude.model claude-haiku-4-5
+hi-shell config set claude.max_tokens 256
+hi-shell config set claude.thinking disabled
+```
+
+`claude.thinking` accepts `disabled`, `enabled`, or `adaptive`. `disabled` omits the `thinking` field from the API request. For manual extended thinking, use `enabled` and set a budget smaller than `max_tokens`:
+
+```sh
+hi-shell config set claude.max_tokens 2048
+hi-shell config set claude.thinking_budget_tokens 1024
+hi-shell config set claude.thinking enabled
+```
+
+Some newer Claude models only accept `adaptive`; choose it when required by the model's API documentation.
+
 View the active config:
 
 ```sh
@@ -53,6 +75,14 @@ api_key_env = "DEEPSEEK_API_KEY"
 model = "deepseek-v4-flash"
 thinking = "disabled"
 max_tokens = 256
+
+[claude]
+base_url = "https://api.anthropic.com"
+api_key_env = "ANTHROPIC_API_KEY"
+model = "claude-haiku-4-5"
+max_tokens = 256
+thinking = "disabled"
+thinking_budget_tokens = 1024
 
 [keybindings]
 prefix = "^]"

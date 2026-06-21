@@ -30,7 +30,7 @@ Shell commands are often easy to describe and annoying to spell out. `hi-shell` 
 - Ghost-text suggestions powered by zsh ZLE widgets.
 - Tab-to-accept flow; Enter only runs after you accept.
 - `safe`, `warn`, and `blocked` risk scoring.
-- Built-in support for OpenAI and DeepSeek APIs.
+- Built-in support for OpenAI, DeepSeek, and Claude APIs.
 - OpenAI-compatible provider configuration.
 - Optional shell context and filtered history.
 - Clean install and uninstall with one managed `.zshrc` block.
@@ -75,6 +75,17 @@ export DEEPSEEK_API_KEY="sk-..."
 hi-shell config set provider deepseek
 hi-shell config set deepseek.api_key_env DEEPSEEK_API_KEY
 hi-shell config set deepseek.model deepseek-v4-flash
+```
+
+Claude is supported with its native Messages API:
+
+```sh
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+hi-shell config set provider claude
+hi-shell config set claude.api_key_env ANTHROPIC_API_KEY
+hi-shell config set claude.model claude-haiku-4-5
+hi-shell config set claude.thinking disabled
 ```
 
 Secrets stay in environment variables. The config file stores environment variable names, not API keys.

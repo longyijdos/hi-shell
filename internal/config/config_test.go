@@ -139,6 +139,40 @@ func TestSetDeepSeekConfig(t *testing.T) {
 	}
 }
 
+func TestSetClaudeConfig(t *testing.T) {
+	cfg := Default()
+	settings := map[string]string{
+		"claude.base_url":               "https://api.anthropic.com",
+		"claude.api_key_env":            "ANTHROPIC_API_KEY",
+		"claude.model":                  "claude-haiku-4-5",
+		"claude.max_tokens":             "512",
+		"claude.thinking":               "adaptive",
+		"claude.thinking_budget_tokens": "256",
+	}
+	for key, value := range settings {
+		if err := Set(&cfg, key, value); err != nil {
+			t.Fatalf("Set(%s) error = %v", key, err)
+		}
+		got, err := Get(cfg, key)
+		if err != nil {
+			t.Fatalf("Get(%s) error = %v", key, err)
+		}
+		if got != value {
+			t.Fatalf("Get(%s) = %q, want %q", key, got, value)
+		}
+	}
+	if cfg.Claude.MaxTokens != 512 || cfg.Claude.Thinking != "adaptive" || cfg.Claude.ThinkingBudgetTokens != 256 {
+		t.Fatalf("Claude = %#v", cfg.Claude)
+	}
+}
+
+func TestSetClaudeThinkingRejectsUnknownValue(t *testing.T) {
+	cfg := Default()
+	if err := Set(&cfg, "claude.thinking", "always"); err == nil {
+		t.Fatal("Set() error = nil, want validation error")
+	}
+}
+
 func TestSetOpenAIModel(t *testing.T) {
 	cfg := Default()
 
