@@ -55,6 +55,9 @@ func commandDoctor(args []string, stdout, stderr io.Writer, version string) int 
 	case "deepseek":
 		apiKeyReady := cfg.DeepSeek.APIKeyEnv == "" || os.Getenv(cfg.DeepSeek.APIKeyEnv) != "" || !strings.Contains(cfg.DeepSeek.BaseURL, "deepseek.com")
 		detail := cfg.DeepSeek.BaseURL + ", thinking=" + cfg.DeepSeek.Thinking
+		if cfg.DeepSeek.Thinking == "enabled" {
+			detail += ", reasoning_effort=" + cfg.DeepSeek.ReasoningEffort
+		}
 		if cfg.DeepSeek.APIKeyEnv != "" {
 			detail += " via $" + cfg.DeepSeek.APIKeyEnv
 		}

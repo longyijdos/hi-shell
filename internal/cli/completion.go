@@ -107,10 +107,11 @@ func providerFor(cfg config.Config) (llm.Provider, string, error) {
 		}, cfg.OpenAI.Model, nil
 	case "deepseek":
 		return llm.DeepSeekProvider{
-			BaseURL:   cfg.DeepSeek.BaseURL,
-			APIKeyEnv: cfg.DeepSeek.APIKeyEnv,
-			Thinking:  cfg.DeepSeek.Thinking,
-			MaxTokens: cfg.DeepSeek.MaxTokens,
+			BaseURL:         cfg.DeepSeek.BaseURL,
+			APIKeyEnv:       cfg.DeepSeek.APIKeyEnv,
+			Thinking:        cfg.DeepSeek.Thinking,
+			ReasoningEffort: cfg.DeepSeek.ReasoningEffort,
+			MaxTokens:       cfg.DeepSeek.MaxTokens,
 		}, cfg.DeepSeek.Model, nil
 	case "claude":
 		return llm.ClaudeProvider{

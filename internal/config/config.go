@@ -40,11 +40,12 @@ type OpenAIConfig struct {
 }
 
 type DeepSeekConfig struct {
-	BaseURL   string `toml:"base_url"`
-	APIKeyEnv string `toml:"api_key_env"`
-	Model     string `toml:"model"`
-	Thinking  string `toml:"thinking"`
-	MaxTokens int    `toml:"max_tokens"`
+	BaseURL         string `toml:"base_url"`
+	APIKeyEnv       string `toml:"api_key_env"`
+	Model           string `toml:"model"`
+	Thinking        string `toml:"thinking"`
+	ReasoningEffort string `toml:"reasoning_effort"`
+	MaxTokens       int    `toml:"max_tokens"`
 }
 
 type ClaudeConfig struct {
@@ -103,11 +104,12 @@ func Default() Config {
 			Model:     "gpt-4.1-mini",
 		},
 		DeepSeek: DeepSeekConfig{
-			BaseURL:   "https://api.deepseek.com/v1",
-			APIKeyEnv: "DEEPSEEK_API_KEY",
-			Model:     "deepseek-v4-flash",
-			Thinking:  "disabled",
-			MaxTokens: 256,
+			BaseURL:         "https://api.deepseek.com/v1",
+			APIKeyEnv:       "DEEPSEEK_API_KEY",
+			Model:           "deepseek-v4-flash",
+			Thinking:        "disabled",
+			ReasoningEffort: "high",
+			MaxTokens:       256,
 		},
 		Claude: ClaudeConfig{
 			BaseURL:              "https://api.anthropic.com",
@@ -281,6 +283,11 @@ func Set(cfg *Config, key, value string) error {
 			return fmt.Errorf("deepseek.thinking must be enabled or disabled")
 		}
 		cfg.DeepSeek.Thinking = value
+	case "deepseek.reasoning_effort":
+		if value != "high" && value != "max" {
+			return fmt.Errorf("deepseek.reasoning_effort must be high or max")
+		}
+		cfg.DeepSeek.ReasoningEffort = value
 	case "deepseek.max_tokens":
 		maxTokens, err := strconv.Atoi(value)
 		if err != nil || maxTokens <= 0 {
@@ -381,6 +388,8 @@ func Get(cfg Config, key string) (string, error) {
 		return cfg.DeepSeek.Model, nil
 	case "deepseek.thinking":
 		return cfg.DeepSeek.Thinking, nil
+	case "deepseek.reasoning_effort":
+		return cfg.DeepSeek.ReasoningEffort, nil
 	case "deepseek.max_tokens":
 		return strconv.Itoa(cfg.DeepSeek.MaxTokens), nil
 	case "claude.base_url":
@@ -513,6 +522,9 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.DeepSeek.Thinking == "" {
 		cfg.DeepSeek.Thinking = defaults.DeepSeek.Thinking
+	}
+	if cfg.DeepSeek.ReasoningEffort == "" {
+		cfg.DeepSeek.ReasoningEffort = defaults.DeepSeek.ReasoningEffort
 	}
 	if cfg.DeepSeek.MaxTokens <= 0 {
 		cfg.DeepSeek.MaxTokens = defaults.DeepSeek.MaxTokens

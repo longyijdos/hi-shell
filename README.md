@@ -75,6 +75,8 @@ export DEEPSEEK_API_KEY="sk-..."
 hi-shell config set provider deepseek
 hi-shell config set deepseek.api_key_env DEEPSEEK_API_KEY
 hi-shell config set deepseek.model deepseek-v4-flash
+hi-shell config set deepseek.thinking enabled
+hi-shell config set deepseek.reasoning_effort high
 ```
 
 Claude is supported with its native Messages API:

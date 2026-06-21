@@ -12,11 +12,12 @@ import (
 )
 
 type DeepSeekProvider struct {
-	BaseURL   string
-	APIKeyEnv string
-	Thinking  string
-	MaxTokens int
-	Client    *http.Client
+	BaseURL         string
+	APIKeyEnv       string
+	Thinking        string
+	ReasoningEffort string
+	MaxTokens       int
+	Client          *http.Client
 }
 
 func (p DeepSeekProvider) Generate(ctx context.Context, req Request) (Completion, error) {
@@ -59,6 +60,15 @@ func (p DeepSeekProvider) Generate(ctx context.Context, req Request) (Completion
 	if thinking == "disabled" {
 		temperature := 0.1
 		payload.Temperature = &temperature
+	} else {
+		reasoningEffort := strings.ToLower(strings.TrimSpace(p.ReasoningEffort))
+		if reasoningEffort == "" {
+			reasoningEffort = "high"
+		}
+		if reasoningEffort != "high" && reasoningEffort != "max" {
+			return Completion{}, fmt.Errorf("deepseek reasoning_effort must be high or max")
+		}
+		payload.ReasoningEffort = reasoningEffort
 	}
 
 	body, err := json.Marshal(payload)
@@ -108,11 +118,12 @@ func (p DeepSeekProvider) Generate(ctx context.Context, req Request) (Completion
 }
 
 type deepSeekRequest struct {
-	Model       string            `json:"model"`
-	Messages    []Message         `json:"messages"`
-	Temperature *float64          `json:"temperature,omitempty"`
-	MaxTokens   int               `json:"max_tokens,omitempty"`
-	Thinking    *deepSeekThinking `json:"thinking,omitempty"`
+	Model           string            `json:"model"`
+	Messages        []Message         `json:"messages"`
+	Temperature     *float64          `json:"temperature,omitempty"`
+	MaxTokens       int               `json:"max_tokens,omitempty"`
+	Thinking        *deepSeekThinking `json:"thinking,omitempty"`
+	ReasoningEffort string            `json:"reasoning_effort,omitempty"`
 }
 
 type deepSeekThinking struct {

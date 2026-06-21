@@ -56,6 +56,9 @@ func TestDeepSeekProviderSendsFastCommandOptions(t *testing.T) {
 	if payload["temperature"] != 0.1 {
 		t.Fatalf("temperature = %#v, want 0.1", payload["temperature"])
 	}
+	if _, ok := payload["reasoning_effort"]; ok {
+		t.Fatalf("reasoning_effort = %#v, want omitted when thinking is disabled", payload["reasoning_effort"])
+	}
 	if _, ok := payload["stop"]; ok {
 		t.Fatalf("stop = %#v, want omitted", payload["stop"])
 	}
@@ -73,6 +76,39 @@ func TestDeepSeekProviderSendsFastCommandOptions(t *testing.T) {
 	}
 	if _, ok := firstMessage["content"]; !ok {
 		t.Fatalf("first message missing lowercase content: %#v", firstMessage)
+	}
+}
+
+func TestDeepSeekProviderSendsReasoningEffortOnlyWhenThinkingEnabled(t *testing.T) {
+	var payload map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"git status"}}]}`))
+	}))
+	defer server.Close()
+
+	provider := DeepSeekProvider{
+		BaseURL:         server.URL,
+		Thinking:        "enabled",
+		ReasoningEffort: "max",
+	}
+	if _, err := provider.Generate(context.Background(), Request{
+		Model:    "deepseek-v4-pro",
+		Messages: []Message{{Role: "user", Content: "show status"}},
+	}); err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	thinking, ok := payload["thinking"].(map[string]any)
+	if !ok || thinking["type"] != "enabled" {
+		t.Fatalf("thinking = %#v", payload["thinking"])
+	}
+	if payload["reasoning_effort"] != "max" {
+		t.Fatalf("reasoning_effort = %#v, want max", payload["reasoning_effort"])
+	}
+	if _, ok := payload["temperature"]; ok {
+		t.Fatalf("temperature = %#v, want omitted when thinking is enabled", payload["temperature"])
 	}
 }
 

@@ -28,7 +28,11 @@ export DEEPSEEK_API_KEY="sk-..."
 hi-shell config set provider deepseek
 hi-shell config set deepseek.api_key_env DEEPSEEK_API_KEY
 hi-shell config set deepseek.model deepseek-v4-flash
+hi-shell config set deepseek.thinking enabled
+hi-shell config set deepseek.reasoning_effort high
 ```
+
+`deepseek.reasoning_effort` accepts `high` or `max` and is sent only when `deepseek.thinking = "enabled"`. It is omitted in non-thinking mode.
 
 Claude uses its native Messages API:
 
@@ -74,6 +78,7 @@ base_url = "https://api.deepseek.com/v1"
 api_key_env = "DEEPSEEK_API_KEY"
 model = "deepseek-v4-flash"
 thinking = "disabled"
+reasoning_effort = "high"
 max_tokens = 256
 
 [claude]

@@ -116,11 +116,12 @@ func TestSetDeepSeekConfig(t *testing.T) {
 	cfg := Default()
 
 	settings := map[string]string{
-		"deepseek.base_url":    "https://api.deepseek.com/v1",
-		"deepseek.api_key_env": "OPENAI_API_KEY",
-		"deepseek.model":       "deepseek-v4-flash",
-		"deepseek.thinking":    "enabled",
-		"deepseek.max_tokens":  "128",
+		"deepseek.base_url":         "https://api.deepseek.com/v1",
+		"deepseek.api_key_env":      "OPENAI_API_KEY",
+		"deepseek.model":            "deepseek-v4-flash",
+		"deepseek.thinking":         "enabled",
+		"deepseek.reasoning_effort": "max",
+		"deepseek.max_tokens":       "128",
 	}
 	for key, value := range settings {
 		if err := Set(&cfg, key, value); err != nil {
@@ -133,6 +134,9 @@ func TestSetDeepSeekConfig(t *testing.T) {
 	}
 	if cfg.DeepSeek.Thinking != "enabled" {
 		t.Fatalf("DeepSeek.Thinking = %q", cfg.DeepSeek.Thinking)
+	}
+	if cfg.DeepSeek.ReasoningEffort != "max" {
+		t.Fatalf("DeepSeek.ReasoningEffort = %q", cfg.DeepSeek.ReasoningEffort)
 	}
 	if cfg.DeepSeek.MaxTokens != 128 {
 		t.Fatalf("DeepSeek.MaxTokens = %d", cfg.DeepSeek.MaxTokens)
