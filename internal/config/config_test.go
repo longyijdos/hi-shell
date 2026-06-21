@@ -177,6 +177,33 @@ func TestSetClaudeThinkingRejectsUnknownValue(t *testing.T) {
 	}
 }
 
+func TestSetOptionalProviderTemperatures(t *testing.T) {
+	cfg := Default()
+	settings := map[string]string{
+		"openai.temperature":   "0.3",
+		"deepseek.temperature": "0.4",
+		"claude.temperature":   "0.5",
+	}
+	for key, value := range settings {
+		if err := Set(&cfg, key, value); err != nil {
+			t.Fatalf("Set(%s) error = %v", key, err)
+		}
+		got, err := Get(cfg, key)
+		if err != nil || got != value {
+			t.Fatalf("Get(%s) = %q, %v; want %q, nil", key, got, err, value)
+		}
+	}
+	if err := Set(&cfg, "openai.temperature", "unset"); err != nil {
+		t.Fatalf("Set(unset) error = %v", err)
+	}
+	if cfg.OpenAI.Temperature != nil {
+		t.Fatalf("OpenAI.Temperature = %#v, want nil", cfg.OpenAI.Temperature)
+	}
+	if err := Set(&cfg, "claude.temperature", "1.1"); err == nil {
+		t.Fatal("Set(claude.temperature) error = nil, want validation error")
+	}
+}
+
 func TestSetOpenAIModel(t *testing.T) {
 	cfg := Default()
 

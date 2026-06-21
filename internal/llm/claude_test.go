@@ -82,7 +82,7 @@ func TestClaudeProviderOmitsThinkingWhenDisabled(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := ClaudeProvider{BaseURL: server.URL}
+	provider := ClaudeProvider{BaseURL: server.URL, Temperature: float64Pointer(0.2)}
 	if _, err := provider.Generate(context.Background(), Request{
 		Model:    "claude-test",
 		Messages: []Message{{Role: "user", Content: "where am I"}},
@@ -91,6 +91,37 @@ func TestClaudeProviderOmitsThinkingWhenDisabled(t *testing.T) {
 	}
 	if _, exists := payload["thinking"]; exists {
 		t.Fatalf("thinking = %#v, want omitted", payload["thinking"])
+	}
+	if payload["temperature"] != 0.2 {
+		t.Fatalf("temperature = %#v, want 0.2", payload["temperature"])
+	}
+}
+
+func TestClaudeProviderOmitsTemperatureWhenThinkingEnabled(t *testing.T) {
+	var payload map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		_, _ = w.Write([]byte(`{"content":[{"type":"text","text":"pwd"}]}`))
+	}))
+	defer server.Close()
+
+	provider := ClaudeProvider{
+		BaseURL:              server.URL,
+		Thinking:             "enabled",
+		ThinkingBudgetTokens: 32,
+		MaxTokens:            64,
+		Temperature:          float64Pointer(0.2),
+	}
+	if _, err := provider.Generate(context.Background(), Request{
+		Model:    "claude-test",
+		Messages: []Message{{Role: "user", Content: "where am I"}},
+	}); err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	if _, exists := payload["temperature"]; exists {
+		t.Fatalf("temperature = %#v, want omitted when thinking is enabled", payload["temperature"])
 	}
 }
 

@@ -12,9 +12,10 @@ import (
 )
 
 type OpenAIProvider struct {
-	BaseURL   string
-	APIKeyEnv string
-	Client    *http.Client
+	BaseURL     string
+	APIKeyEnv   string
+	Temperature *float64
+	Client      *http.Client
 }
 
 func (p OpenAIProvider) Generate(ctx context.Context, req Request) (Completion, error) {
@@ -36,9 +37,14 @@ func (p OpenAIProvider) Generate(ctx context.Context, req Request) (Completion, 
 	}
 
 	payload := openAIRequest{
-		Model:       req.Model,
-		Messages:    req.Messages,
-		Temperature: 0.1,
+		Model:    req.Model,
+		Messages: req.Messages,
+	}
+	if p.Temperature != nil {
+		if *p.Temperature < 0 || *p.Temperature > 2 {
+			return Completion{}, fmt.Errorf("openai temperature must be between 0 and 2")
+		}
+		payload.Temperature = p.Temperature
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -89,7 +95,7 @@ func (p OpenAIProvider) Generate(ctx context.Context, req Request) (Completion, 
 type openAIRequest struct {
 	Model       string    `json:"model"`
 	Messages    []Message `json:"messages"`
-	Temperature float64   `json:"temperature"`
+	Temperature *float64  `json:"temperature,omitempty"`
 }
 
 type openAIResponse struct {

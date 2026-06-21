@@ -17,6 +17,7 @@ type DeepSeekProvider struct {
 	Thinking        string
 	ReasoningEffort string
 	MaxTokens       int
+	Temperature     *float64
 	Client          *http.Client
 }
 
@@ -57,10 +58,13 @@ func (p DeepSeekProvider) Generate(ctx context.Context, req Request) (Completion
 		MaxTokens: maxTokens,
 		Thinking:  &deepSeekThinking{Type: thinking},
 	}
-	if thinking == "disabled" {
-		temperature := 0.1
-		payload.Temperature = &temperature
-	} else {
+	if p.Temperature != nil {
+		if *p.Temperature < 0 || *p.Temperature > 2 {
+			return Completion{}, fmt.Errorf("deepseek temperature must be between 0 and 2")
+		}
+		payload.Temperature = p.Temperature
+	}
+	if thinking == "enabled" {
 		reasoningEffort := strings.ToLower(strings.TrimSpace(p.ReasoningEffort))
 		if reasoningEffort == "" {
 			reasoningEffort = "high"

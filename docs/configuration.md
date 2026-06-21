@@ -18,6 +18,8 @@ export OPENAI_API_KEY="sk-..."
 hi-shell config set provider openai
 hi-shell config set openai.api_key_env OPENAI_API_KEY
 hi-shell config set openai.model gpt-4.1-mini
+# Optional: omitted when unset.
+hi-shell config set openai.temperature 0.1
 ```
 
 DeepSeek is also supported and has a dedicated low-latency path:
@@ -30,9 +32,13 @@ hi-shell config set deepseek.api_key_env DEEPSEEK_API_KEY
 hi-shell config set deepseek.model deepseek-v4-flash
 hi-shell config set deepseek.thinking enabled
 hi-shell config set deepseek.reasoning_effort high
+# Optional: omitted when unset.
+hi-shell config set deepseek.temperature 0.1
 ```
 
 `deepseek.reasoning_effort` accepts `high` or `max` and is sent only when `deepseek.thinking = "enabled"`. It is omitted in non-thinking mode.
+
+All provider temperature settings are optional. `openai.temperature` and `deepseek.temperature` accept values from `0` to `2`; `claude.temperature` accepts values from `0` to `1`. Use `hi-shell config set <provider>.temperature unset` to remove a previously configured value. Claude omits `temperature` whenever its thinking mode is enabled or adaptive.
 
 Claude uses its native Messages API:
 
@@ -44,6 +50,7 @@ hi-shell config set claude.api_key_env ANTHROPIC_API_KEY
 hi-shell config set claude.model claude-haiku-4-5
 hi-shell config set claude.max_tokens 256
 hi-shell config set claude.thinking disabled
+hi-shell config set claude.temperature 0.1
 ```
 
 `claude.thinking` accepts `disabled`, `enabled`, or `adaptive`. `disabled` omits the `thinking` field from the API request. For manual extended thinking, use `enabled` and set a budget smaller than `max_tokens`:

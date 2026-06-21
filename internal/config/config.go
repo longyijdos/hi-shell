@@ -34,27 +34,30 @@ type Config struct {
 }
 
 type OpenAIConfig struct {
-	BaseURL   string `toml:"base_url"`
-	APIKeyEnv string `toml:"api_key_env"`
-	Model     string `toml:"model"`
+	BaseURL     string   `toml:"base_url"`
+	APIKeyEnv   string   `toml:"api_key_env"`
+	Model       string   `toml:"model"`
+	Temperature *float64 `toml:"temperature,omitempty"`
 }
 
 type DeepSeekConfig struct {
-	BaseURL         string `toml:"base_url"`
-	APIKeyEnv       string `toml:"api_key_env"`
-	Model           string `toml:"model"`
-	Thinking        string `toml:"thinking"`
-	ReasoningEffort string `toml:"reasoning_effort"`
-	MaxTokens       int    `toml:"max_tokens"`
+	BaseURL         string   `toml:"base_url"`
+	APIKeyEnv       string   `toml:"api_key_env"`
+	Model           string   `toml:"model"`
+	Thinking        string   `toml:"thinking"`
+	ReasoningEffort string   `toml:"reasoning_effort"`
+	MaxTokens       int      `toml:"max_tokens"`
+	Temperature     *float64 `toml:"temperature,omitempty"`
 }
 
 type ClaudeConfig struct {
-	BaseURL              string `toml:"base_url"`
-	APIKeyEnv            string `toml:"api_key_env"`
-	Model                string `toml:"model"`
-	MaxTokens            int    `toml:"max_tokens"`
-	Thinking             string `toml:"thinking"`
-	ThinkingBudgetTokens int    `toml:"thinking_budget_tokens"`
+	BaseURL              string   `toml:"base_url"`
+	APIKeyEnv            string   `toml:"api_key_env"`
+	Model                string   `toml:"model"`
+	MaxTokens            int      `toml:"max_tokens"`
+	Thinking             string   `toml:"thinking"`
+	ThinkingBudgetTokens int      `toml:"thinking_budget_tokens"`
+	Temperature          *float64 `toml:"temperature,omitempty"`
 }
 
 type KeybindingsConfig struct {
@@ -270,6 +273,12 @@ func Set(cfg *Config, key, value string) error {
 		cfg.OpenAI.BaseURL = value
 	case "openai.api_key_env", "api_key_env":
 		cfg.OpenAI.APIKeyEnv = value
+	case "openai.temperature":
+		temperature, err := parseOptionalTemperature(value, "openai.temperature", 2)
+		if err != nil {
+			return err
+		}
+		cfg.OpenAI.Temperature = temperature
 	case "api_key":
 		return ErrSecretNotStored
 	case "deepseek.base_url":
@@ -288,6 +297,12 @@ func Set(cfg *Config, key, value string) error {
 			return fmt.Errorf("deepseek.reasoning_effort must be high or max")
 		}
 		cfg.DeepSeek.ReasoningEffort = value
+	case "deepseek.temperature":
+		temperature, err := parseOptionalTemperature(value, "deepseek.temperature", 2)
+		if err != nil {
+			return err
+		}
+		cfg.DeepSeek.Temperature = temperature
 	case "deepseek.max_tokens":
 		maxTokens, err := strconv.Atoi(value)
 		if err != nil || maxTokens <= 0 {
@@ -317,6 +332,12 @@ func Set(cfg *Config, key, value string) error {
 			return fmt.Errorf("claude.thinking_budget_tokens must be a positive integer")
 		}
 		cfg.Claude.ThinkingBudgetTokens = thinkingBudgetTokens
+	case "claude.temperature":
+		temperature, err := parseOptionalTemperature(value, "claude.temperature", 1)
+		if err != nil {
+			return err
+		}
+		cfg.Claude.Temperature = temperature
 	case "keybindings.prefix":
 		if value == "" {
 			return fmt.Errorf("keybindings.prefix must be non-empty")
@@ -380,6 +401,8 @@ func Get(cfg Config, key string) (string, error) {
 		return cfg.OpenAI.BaseURL, nil
 	case "openai.api_key_env", "api_key_env":
 		return cfg.OpenAI.APIKeyEnv, nil
+	case "openai.temperature":
+		return formatOptionalFloat(cfg.OpenAI.Temperature), nil
 	case "deepseek.base_url":
 		return cfg.DeepSeek.BaseURL, nil
 	case "deepseek.api_key_env":
@@ -390,6 +413,8 @@ func Get(cfg Config, key string) (string, error) {
 		return cfg.DeepSeek.Thinking, nil
 	case "deepseek.reasoning_effort":
 		return cfg.DeepSeek.ReasoningEffort, nil
+	case "deepseek.temperature":
+		return formatOptionalFloat(cfg.DeepSeek.Temperature), nil
 	case "deepseek.max_tokens":
 		return strconv.Itoa(cfg.DeepSeek.MaxTokens), nil
 	case "claude.base_url":
@@ -404,6 +429,8 @@ func Get(cfg Config, key string) (string, error) {
 		return cfg.Claude.Thinking, nil
 	case "claude.thinking_budget_tokens":
 		return strconv.Itoa(cfg.Claude.ThinkingBudgetTokens), nil
+	case "claude.temperature":
+		return formatOptionalFloat(cfg.Claude.Temperature), nil
 	case "keybindings.prefix":
 		return cfg.Keybindings.Prefix, nil
 	case "context.pwd":
@@ -463,6 +490,24 @@ func setPositiveInt(value string, target *int, name string) error {
 	}
 	*target = parsed
 	return nil
+}
+
+func parseOptionalTemperature(value, name string, maximum float64) (*float64, error) {
+	if value == "unset" {
+		return nil, nil
+	}
+	temperature, err := strconv.ParseFloat(value, 64)
+	if err != nil || temperature < 0 || temperature > maximum {
+		return nil, fmt.Errorf("%s must be a number between 0 and %s, or unset", name, strconv.FormatFloat(maximum, 'f', -1, 64))
+	}
+	return &temperature, nil
+}
+
+func formatOptionalFloat(value *float64) string {
+	if value == nil {
+		return ""
+	}
+	return strconv.FormatFloat(*value, 'f', -1, 64)
 }
 
 func applyDefaults(cfg *Config) {

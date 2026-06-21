@@ -19,6 +19,7 @@ type ClaudeProvider struct {
 	Thinking             string
 	ThinkingBudgetTokens int
 	MaxTokens            int
+	Temperature          *float64
 	Client               *http.Client
 }
 
@@ -71,6 +72,12 @@ func (p ClaudeProvider) Generate(ctx context.Context, req Request) (Completion, 
 	}
 	switch thinking {
 	case "disabled":
+		if p.Temperature != nil {
+			if *p.Temperature < 0 || *p.Temperature > 1 {
+				return Completion{}, fmt.Errorf("claude temperature must be between 0 and 1")
+			}
+			payload.Temperature = p.Temperature
+		}
 	case "adaptive":
 		payload.Thinking = &claudeThinking{Type: thinking}
 	case "enabled":
@@ -136,11 +143,12 @@ func (p ClaudeProvider) Generate(ctx context.Context, req Request) (Completion, 
 }
 
 type claudeRequest struct {
-	Model     string          `json:"model"`
-	MaxTokens int             `json:"max_tokens"`
-	System    string          `json:"system,omitempty"`
-	Messages  []Message       `json:"messages"`
-	Thinking  *claudeThinking `json:"thinking,omitempty"`
+	Model       string          `json:"model"`
+	MaxTokens   int             `json:"max_tokens"`
+	System      string          `json:"system,omitempty"`
+	Messages    []Message       `json:"messages"`
+	Thinking    *claudeThinking `json:"thinking,omitempty"`
+	Temperature *float64        `json:"temperature,omitempty"`
 }
 
 type claudeThinking struct {

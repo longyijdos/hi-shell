@@ -53,8 +53,8 @@ func TestDeepSeekProviderSendsFastCommandOptions(t *testing.T) {
 	if payload["max_tokens"] != float64(64) {
 		t.Fatalf("max_tokens = %#v, want 64", payload["max_tokens"])
 	}
-	if payload["temperature"] != 0.1 {
-		t.Fatalf("temperature = %#v, want 0.1", payload["temperature"])
+	if _, ok := payload["temperature"]; ok {
+		t.Fatalf("temperature = %#v, want omitted when it is unset", payload["temperature"])
 	}
 	if _, ok := payload["reasoning_effort"]; ok {
 		t.Fatalf("reasoning_effort = %#v, want omitted when thinking is disabled", payload["reasoning_effort"])
@@ -93,6 +93,7 @@ func TestDeepSeekProviderSendsReasoningEffortOnlyWhenThinkingEnabled(t *testing.
 		BaseURL:         server.URL,
 		Thinking:        "enabled",
 		ReasoningEffort: "max",
+		Temperature:     float64Pointer(0.2),
 	}
 	if _, err := provider.Generate(context.Background(), Request{
 		Model:    "deepseek-v4-pro",
@@ -107,9 +108,13 @@ func TestDeepSeekProviderSendsReasoningEffortOnlyWhenThinkingEnabled(t *testing.
 	if payload["reasoning_effort"] != "max" {
 		t.Fatalf("reasoning_effort = %#v, want max", payload["reasoning_effort"])
 	}
-	if _, ok := payload["temperature"]; ok {
-		t.Fatalf("temperature = %#v, want omitted when thinking is enabled", payload["temperature"])
+	if payload["temperature"] != 0.2 {
+		t.Fatalf("temperature = %#v, want 0.2", payload["temperature"])
 	}
+}
+
+func float64Pointer(value float64) *float64 {
+	return &value
 }
 
 func TestDeepSeekProviderPreservesMultiLineResponse(t *testing.T) {

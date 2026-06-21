@@ -102,8 +102,9 @@ func providerFor(cfg config.Config) (llm.Provider, string, error) {
 	switch strings.ToLower(strings.TrimSpace(cfg.Provider)) {
 	case "openai", "openai-compatible":
 		return llm.OpenAIProvider{
-			BaseURL:   cfg.OpenAI.BaseURL,
-			APIKeyEnv: cfg.OpenAI.APIKeyEnv,
+			BaseURL:     cfg.OpenAI.BaseURL,
+			APIKeyEnv:   cfg.OpenAI.APIKeyEnv,
+			Temperature: cfg.OpenAI.Temperature,
 		}, cfg.OpenAI.Model, nil
 	case "deepseek":
 		return llm.DeepSeekProvider{
@@ -112,6 +113,7 @@ func providerFor(cfg config.Config) (llm.Provider, string, error) {
 			Thinking:        cfg.DeepSeek.Thinking,
 			ReasoningEffort: cfg.DeepSeek.ReasoningEffort,
 			MaxTokens:       cfg.DeepSeek.MaxTokens,
+			Temperature:     cfg.DeepSeek.Temperature,
 		}, cfg.DeepSeek.Model, nil
 	case "claude":
 		return llm.ClaudeProvider{
@@ -120,6 +122,7 @@ func providerFor(cfg config.Config) (llm.Provider, string, error) {
 			MaxTokens:            cfg.Claude.MaxTokens,
 			Thinking:             cfg.Claude.Thinking,
 			ThinkingBudgetTokens: cfg.Claude.ThinkingBudgetTokens,
+			Temperature:          cfg.Claude.Temperature,
 		}, cfg.Claude.Model, nil
 	default:
 		return nil, "", fmt.Errorf("unsupported provider %q; use openai, openai-compatible, deepseek, or claude", cfg.Provider)

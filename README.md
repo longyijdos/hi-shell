@@ -65,6 +65,8 @@ export OPENAI_API_KEY="sk-..."
 hi-shell config set provider openai
 hi-shell config set openai.api_key_env OPENAI_API_KEY
 hi-shell config set openai.model gpt-4.1-mini
+# Optional: omit by default; set only if the model supports it.
+hi-shell config set openai.temperature 0.1
 ```
 
 DeepSeek is also supported:
@@ -77,6 +79,8 @@ hi-shell config set deepseek.api_key_env DEEPSEEK_API_KEY
 hi-shell config set deepseek.model deepseek-v4-flash
 hi-shell config set deepseek.thinking enabled
 hi-shell config set deepseek.reasoning_effort high
+# Optional; works in both thinking modes.
+hi-shell config set deepseek.temperature 0.1
 ```
 
 Claude is supported with its native Messages API:
@@ -88,6 +92,8 @@ hi-shell config set provider claude
 hi-shell config set claude.api_key_env ANTHROPIC_API_KEY
 hi-shell config set claude.model claude-haiku-4-5
 hi-shell config set claude.thinking disabled
+# Optional; only sent when Claude thinking is disabled.
+hi-shell config set claude.temperature 0.1
 ```
 
 Secrets stay in environment variables. The config file stores environment variable names, not API keys.
