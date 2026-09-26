@@ -5,35 +5,16 @@
 </p>
 
 <p align="center">
-  AI-powered zsh command generation with reviewable, risk-scored shell suggestions.
+  Forgot the command? Say hi.
 </p>
 
 ![hi-shell demo](assets/demo.gif)
 
-`hi-shell` turns natural language into shell commands and shows the result as ghost text in your current zsh line. Press Tab to accept the suggestion, edit it if needed, then press Enter yourself.
+`hi-shell` is for the moment you know what you want to do but can't recall the command. It's a small Go binary wired into zsh's ZLE widgets, so you can get a suggestion without leaving your prompt.
 
-It is not an autonomous shell agent, terminal emulator, or chat UI. It keeps command generation inside your normal terminal workflow while leaving execution under your control.
+Type `hi` and describe what you need. It asks your configured LLM for a command and shows the suggestion as ghost text. Tab puts it on the editable command line; Enter runs it when you're ready.
 
-## ✨ Why hi-shell
-
-Shell commands are often easy to describe and annoying to spell out. `hi-shell` handles the translation without taking over the terminal.
-
-- Stay in zsh instead of switching to a chat window.
-- Review every generated command before it can run.
-- Accept suggestions into the real command line, not a separate UI.
-- Revise a suggestion or ask what it does before running it.
-- Block clearly catastrophic commands by default.
-
-## ⚡ Features
-
-- Natural-language command generation from your shell.
-- Ghost-text suggestions powered by zsh ZLE widgets.
-- Tab-to-accept flow; Enter only runs after you accept.
-- `safe`, `warn`, and `blocked` risk scoring.
-- Built-in support for OpenAI, DeepSeek, and Claude APIs.
-- OpenAI-compatible provider configuration.
-- Optional shell context and filtered history.
-- Clean install and uninstall with one managed `.zshrc` block.
+Use `hi?` to ask about a suggestion or `hi:` to revise it. Local risk scoring warns about risky commands and blocks clearly catastrophic ones.
 
 ## 🚀 Install
 
