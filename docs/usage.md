@@ -10,26 +10,22 @@ hi list all go files
 
 Press Enter to generate a suggestion. Press Tab to accept it into your input buffer. Press Enter again to run it.
 
+Before accepting a suggestion, type `hi? will this modify files?` and press Enter to ask about it, or type `hi: only search this directory` and press Enter to revise it. Both use the current suggestion and original request as context. Without a current suggestion, these prefixes show a message and leave the input available for editing. A new `hi ...` request starts a fresh suggestion without sending the previous request or suggestion to the model.
+
 `hi` is only the zsh natural-language prefix. Use `hi-shell` for management commands such as config, diagnostics, install, and uninstall.
 
 ## Keyboard Behavior
 
 | Key | State | Behavior |
 | --- | --- | --- |
-| Enter | buffer starts with `hi ` | Generate a command suggestion |
-| Enter | revise mode | Revise the suggestion with session history |
-| Enter | ask mode | Ask a question about the current suggestion |
-| Enter | suggestion exists, edit mode | Run current `BUFFER` normally |
+| Enter | buffer starts with `hi ` | Generate a new command suggestion |
+| Enter | buffer starts with `hi?` | Ask about the current suggestion |
+| Enter | buffer starts with `hi:` | Revise the current suggestion with feedback |
 | Enter | normal shell input | Run normal zsh `accept-line` |
 | Tab | suggestion visible | Accept suggestion into `BUFFER` |
 | Tab | no suggestion | Use normal zsh completion |
-| Text input | suggestion visible | Hide the ghost text and edit normally |
-| Prefix, then `e` | suggestion exists | Switch to edit mode |
-| Prefix, then `r` | suggestion exists | Switch to revise mode |
-| Prefix, then `a` | suggestion exists | Switch to ask mode |
-| Prefix, then `q` | prefix mode | Exit prefix mode |
-
-See [Keybindings](zsh-keybindings.md) for more detail.
+| Text input | suggestion visible | Hide the ghost text; the suggestion remains available for `hi?` or `hi:` |
+| Ctrl-C | current input line | Cancel the line and clear the suggestion session |
 
 ## CLI
 

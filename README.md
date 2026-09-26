@@ -110,7 +110,7 @@ hi list go files
 
 Press Enter to generate a suggestion. If the command looks right, press Tab to accept it into your shell input line. Press Enter again to run it.
 
-Use the prefix key, Ctrl-] by default, to revise, ask about, edit, or dismiss the current suggestion. See [Usage](docs/usage.md) and [Keybindings](docs/zsh-keybindings.md) for details.
+While a suggestion is available, type `hi?` followed by a question to ask about it, or `hi:` followed by feedback to revise it. See [Usage](docs/usage.md) for details.
 
 ## 🛡️ Safety
 
@@ -124,7 +124,6 @@ See [Risk Scoring](docs/risk-scoring.md) for the detailed model.
 
 - [Configuration](docs/configuration.md)
 - [Usage and CLI](docs/usage.md)
-- [Keybindings](docs/zsh-keybindings.md)
 - [Risk Scoring](docs/risk-scoring.md)
 - [Development and Release](docs/development.md)
 

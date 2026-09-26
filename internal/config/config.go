@@ -23,7 +23,6 @@ var ErrSecretNotStored = errors.New("hi-shell does not store API keys in config;
 type Config struct {
 	Provider    string            `toml:"provider"`
 	TimeoutMS   int               `toml:"timeout_ms"`
-	Keybindings KeybindingsConfig `toml:"keybindings"`
 	OpenAI      OpenAIConfig      `toml:"openai"`
 	DeepSeek    DeepSeekConfig    `toml:"deepseek"`
 	Claude      ClaudeConfig      `toml:"claude"`
@@ -60,10 +59,6 @@ type ClaudeConfig struct {
 	Temperature          *float64 `toml:"temperature,omitempty"`
 }
 
-type KeybindingsConfig struct {
-	Prefix string `toml:"prefix"`
-}
-
 type ContextConfig struct {
 	PWD            bool `toml:"pwd"`
 	OS             bool `toml:"os"`
@@ -98,9 +93,6 @@ func Default() Config {
 	return Config{
 		Provider:  "openai",
 		TimeoutMS: 5000,
-		Keybindings: KeybindingsConfig{
-			Prefix: "^]",
-		},
 		OpenAI: OpenAIConfig{
 			BaseURL:   "https://api.openai.com/v1",
 			APIKeyEnv: "OPENAI_API_KEY",
@@ -338,11 +330,6 @@ func Set(cfg *Config, key, value string) error {
 			return err
 		}
 		cfg.Claude.Temperature = temperature
-	case "keybindings.prefix":
-		if value == "" {
-			return fmt.Errorf("keybindings.prefix must be non-empty")
-		}
-		cfg.Keybindings.Prefix = value
 	case "context.pwd":
 		return setBool(value, &cfg.Context.PWD)
 	case "context.os":
@@ -431,8 +418,6 @@ func Get(cfg Config, key string) (string, error) {
 		return strconv.Itoa(cfg.Claude.ThinkingBudgetTokens), nil
 	case "claude.temperature":
 		return formatOptionalFloat(cfg.Claude.Temperature), nil
-	case "keybindings.prefix":
-		return cfg.Keybindings.Prefix, nil
 	case "context.pwd":
 		return strconv.FormatBool(cfg.Context.PWD), nil
 	case "context.os":
@@ -518,10 +503,6 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.TimeoutMS <= 0 {
 		cfg.TimeoutMS = defaults.TimeoutMS
-	}
-	cfg.Keybindings.Prefix = strings.TrimSpace(cfg.Keybindings.Prefix)
-	if cfg.Keybindings.Prefix == "" {
-		cfg.Keybindings.Prefix = defaults.Keybindings.Prefix
 	}
 	if cfg.History.FetchLimit <= 0 {
 		cfg.History.FetchLimit = defaults.History.FetchLimit

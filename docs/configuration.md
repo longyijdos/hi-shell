@@ -96,9 +96,6 @@ max_tokens = 256
 thinking = "disabled"
 thinking_budget_tokens = 1024
 
-[keybindings]
-prefix = "^]"
-
 [context]
 pwd = true
 os = true
@@ -137,7 +134,3 @@ The `[history]` section controls how many commands the plugin fetches and how mu
 ## Sessions
 
 The `[session]` section controls how many revise and ask turns are kept in the current suggestion session, plus validation limits for session JSON passed by integrations.
-
-## Keybindings
-
-Set `keybindings.prefix` to change the hi-shell prefix key used by the zsh plugin. The value uses zsh `bindkey` notation; the default `^]` means Ctrl-].

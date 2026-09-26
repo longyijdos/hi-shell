@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -11,7 +12,6 @@ func TestSaveAndLoadFile(t *testing.T) {
 	cfg := Default()
 	cfg.Provider = "deepseek"
 	cfg.DeepSeek.Model = "deepseek-v4-pro"
-	cfg.Keybindings.Prefix = "^O"
 	cfg.History.FetchLimit = 30
 	cfg.History.MaxEntries = 16
 	cfg.Session.ReviseTurns = 6
@@ -30,9 +30,6 @@ func TestSaveAndLoadFile(t *testing.T) {
 	}
 	if loaded.DeepSeek.Model != "deepseek-v4-pro" {
 		t.Fatalf("DeepSeek.Model = %q", loaded.DeepSeek.Model)
-	}
-	if loaded.Keybindings.Prefix != "^O" {
-		t.Fatalf("Keybindings.Prefix = %q", loaded.Keybindings.Prefix)
 	}
 	if loaded.History.FetchLimit != 30 {
 		t.Fatalf("History.FetchLimit = %d", loaded.History.FetchLimit)
@@ -59,9 +56,6 @@ func TestLoadFileMissingUsesDefaults(t *testing.T) {
 	if loaded.DeepSeek.Thinking != "disabled" {
 		t.Fatalf("DeepSeek.Thinking = %q, want disabled", loaded.DeepSeek.Thinking)
 	}
-	if loaded.Keybindings.Prefix != "^]" {
-		t.Fatalf("Keybindings.Prefix = %q, want ^]", loaded.Keybindings.Prefix)
-	}
 	if loaded.History.FetchLimit != 20 {
 		t.Fatalf("History.FetchLimit = %d, want 20", loaded.History.FetchLimit)
 	}
@@ -85,6 +79,21 @@ func TestLoadFileMissingUsesDefaults(t *testing.T) {
 	}
 	if loaded.Session.MaxJSONBytes != 64*1024 {
 		t.Fatalf("Session.MaxJSONBytes = %d, want %d", loaded.Session.MaxJSONBytes, 64*1024)
+	}
+}
+
+func TestLoadFileWithLegacyKeybinding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte("provider = \"deepseek\"\n[keybindings]\nprefix = \"^]\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := LoadFile(path)
+	if err != nil {
+		t.Fatalf("LoadFile() error = %v", err)
+	}
+	if loaded.Provider != "deepseek" {
+		t.Fatalf("Provider = %q, want deepseek", loaded.Provider)
 	}
 }
 
@@ -220,25 +229,6 @@ func TestSetOpenAIModel(t *testing.T) {
 	}
 	if got != "gpt-4.1" {
 		t.Fatalf("Get(openai.model) = %q", got)
-	}
-}
-
-func TestSetKeybindingsPrefix(t *testing.T) {
-	cfg := Default()
-
-	if err := Set(&cfg, "keybindings.prefix", "^[;"); err != nil {
-		t.Fatalf("Set(keybindings.prefix) error = %v", err)
-	}
-	if cfg.Keybindings.Prefix != "^[;" {
-		t.Fatalf("Keybindings.Prefix = %q", cfg.Keybindings.Prefix)
-	}
-
-	got, err := Get(cfg, "keybindings.prefix")
-	if err != nil {
-		t.Fatalf("Get(keybindings.prefix) error = %v", err)
-	}
-	if got != "^[;" {
-		t.Fatalf("Get(keybindings.prefix) = %q", got)
 	}
 }
 
