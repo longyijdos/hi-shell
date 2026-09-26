@@ -55,7 +55,7 @@ func commandDoctor(args []string, stdout, stderr io.Writer, version string) int 
 	case "deepseek":
 		apiKeyReady := cfg.DeepSeek.APIKeyEnv == "" || os.Getenv(cfg.DeepSeek.APIKeyEnv) != "" || !strings.Contains(cfg.DeepSeek.BaseURL, "deepseek.com")
 		detail := cfg.DeepSeek.BaseURL + ", thinking=" + cfg.DeepSeek.Thinking
-		if cfg.DeepSeek.Thinking == "enabled" {
+		if cfg.DeepSeek.Thinking == "enabled" && cfg.DeepSeek.ReasoningEffort != "" {
 			detail += ", reasoning_effort=" + cfg.DeepSeek.ReasoningEffort
 		}
 		if cfg.DeepSeek.APIKeyEnv != "" {
@@ -65,8 +65,8 @@ func commandDoctor(args []string, stdout, stderr io.Writer, version string) int 
 	case "claude":
 		apiKeyReady := cfg.Claude.APIKeyEnv == "" || os.Getenv(cfg.Claude.APIKeyEnv) != "" || !strings.Contains(cfg.Claude.BaseURL, "api.anthropic.com")
 		detail := cfg.Claude.BaseURL + ", model=" + cfg.Claude.Model + ", thinking=" + cfg.Claude.Thinking
-		if cfg.Claude.Thinking == "enabled" {
-			detail += ", budget_tokens=" + fmt.Sprint(cfg.Claude.ThinkingBudgetTokens)
+		if cfg.Claude.Effort != "" {
+			detail += ", effort=" + cfg.Claude.Effort
 		}
 		if cfg.Claude.APIKeyEnv != "" {
 			detail += " via $" + cfg.Claude.APIKeyEnv

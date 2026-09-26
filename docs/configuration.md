@@ -18,8 +18,6 @@ export OPENAI_API_KEY="sk-..."
 hi-shell config set provider openai
 hi-shell config set openai.api_key_env OPENAI_API_KEY
 hi-shell config set openai.model gpt-4.1-mini
-# Optional: omitted when unset.
-hi-shell config set openai.temperature 0.1
 ```
 
 DeepSeek is also supported and has a dedicated low-latency path:
@@ -29,16 +27,11 @@ export DEEPSEEK_API_KEY="sk-..."
 
 hi-shell config set provider deepseek
 hi-shell config set deepseek.api_key_env DEEPSEEK_API_KEY
-hi-shell config set deepseek.model deepseek-v4-flash
+hi-shell config set deepseek.model deepseek-flash
 hi-shell config set deepseek.thinking enabled
-hi-shell config set deepseek.reasoning_effort high
-# Optional: omitted when unset.
-hi-shell config set deepseek.temperature 0.1
 ```
 
-`deepseek.reasoning_effort` accepts `high` or `max` and is sent only when `deepseek.thinking = "enabled"`. It is omitted in non-thinking mode.
-
-All provider temperature settings are optional. `openai.temperature` and `deepseek.temperature` accept values from `0` to `2`; `claude.temperature` accepts values from `0` to `1`. Use `hi-shell config set <provider>.temperature unset` to remove a previously configured value. Claude omits `temperature` whenever its thinking mode is enabled or adaptive.
+`deepseek.reasoning_effort` is optional (`high` or `max`) and is sent only when `deepseek.thinking = "enabled"`. If unset, DeepSeek uses its default effort (`high`). Set it with `hi-shell config set deepseek.reasoning_effort max`; clear an existing value with `hi-shell config set deepseek.reasoning_effort unset`.
 
 Claude uses its native Messages API:
 
@@ -50,18 +43,18 @@ hi-shell config set claude.api_key_env ANTHROPIC_API_KEY
 hi-shell config set claude.model claude-haiku-4-5
 hi-shell config set claude.max_tokens 256
 hi-shell config set claude.thinking disabled
-hi-shell config set claude.temperature 0.1
 ```
 
-`claude.thinking` accepts `disabled`, `enabled`, or `adaptive`. `disabled` omits the `thinking` field from the API request. For manual extended thinking, use `enabled` and set a budget smaller than `max_tokens`:
+`claude.thinking` accepts `disabled` or `adaptive`. Both modes are sent explicitly to the API. The default model, `claude-haiku-4-5`, uses `disabled`; choose a model that supports adaptive thinking before enabling `adaptive`:
 
 ```sh
-hi-shell config set claude.max_tokens 2048
-hi-shell config set claude.thinking_budget_tokens 1024
-hi-shell config set claude.thinking enabled
+hi-shell config set claude.model claude-sonnet-4-6
+hi-shell config set claude.max_tokens 4096
+hi-shell config set claude.thinking adaptive
+hi-shell config set claude.effort medium
 ```
 
-Some newer Claude models only accept `adaptive`; choose it when required by the model's API documentation.
+`claude.effort` is optional and accepts `low`, `medium`, `high`, `xhigh`, or `max`, depending on the model. It is sent as `output_config.effort` only when set. The default `claude-haiku-4-5` model does not support effort; leave it unset for that model. Clear an existing value with `hi-shell config set claude.effort unset`.
 
 View the active config:
 
@@ -83,9 +76,8 @@ model = "gpt-4.1-mini"
 [deepseek]
 base_url = "https://api.deepseek.com/v1"
 api_key_env = "DEEPSEEK_API_KEY"
-model = "deepseek-v4-flash"
+model = "deepseek-flash"
 thinking = "disabled"
-reasoning_effort = "high"
 max_tokens = 256
 
 [claude]
@@ -94,7 +86,6 @@ api_key_env = "ANTHROPIC_API_KEY"
 model = "claude-haiku-4-5"
 max_tokens = 256
 thinking = "disabled"
-thinking_budget_tokens = 1024
 
 [context]
 pwd = true

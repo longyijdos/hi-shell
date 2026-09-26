@@ -56,6 +56,9 @@ func TestLoadFileMissingUsesDefaults(t *testing.T) {
 	if loaded.DeepSeek.Thinking != "disabled" {
 		t.Fatalf("DeepSeek.Thinking = %q, want disabled", loaded.DeepSeek.Thinking)
 	}
+	if loaded.DeepSeek.ReasoningEffort != "" || loaded.Claude.Effort != "" {
+		t.Fatalf("optional efforts = %q, %q, want unset", loaded.DeepSeek.ReasoningEffort, loaded.Claude.Effort)
+	}
 	if loaded.History.FetchLimit != 20 {
 		t.Fatalf("History.FetchLimit = %d, want 20", loaded.History.FetchLimit)
 	}
@@ -127,7 +130,7 @@ func TestSetDeepSeekConfig(t *testing.T) {
 	settings := map[string]string{
 		"deepseek.base_url":         "https://api.deepseek.com/v1",
 		"deepseek.api_key_env":      "OPENAI_API_KEY",
-		"deepseek.model":            "deepseek-v4-flash",
+		"deepseek.model":            "deepseek-flash",
 		"deepseek.thinking":         "enabled",
 		"deepseek.reasoning_effort": "max",
 		"deepseek.max_tokens":       "128",
@@ -150,17 +153,20 @@ func TestSetDeepSeekConfig(t *testing.T) {
 	if cfg.DeepSeek.MaxTokens != 128 {
 		t.Fatalf("DeepSeek.MaxTokens = %d", cfg.DeepSeek.MaxTokens)
 	}
+	if err := Set(&cfg, "deepseek.reasoning_effort", "unset"); err != nil || cfg.DeepSeek.ReasoningEffort != "" {
+		t.Fatalf("unset reasoning_effort: value = %q, error = %v", cfg.DeepSeek.ReasoningEffort, err)
+	}
 }
 
 func TestSetClaudeConfig(t *testing.T) {
 	cfg := Default()
 	settings := map[string]string{
-		"claude.base_url":               "https://api.anthropic.com",
-		"claude.api_key_env":            "ANTHROPIC_API_KEY",
-		"claude.model":                  "claude-haiku-4-5",
-		"claude.max_tokens":             "512",
-		"claude.thinking":               "adaptive",
-		"claude.thinking_budget_tokens": "256",
+		"claude.base_url":    "https://api.anthropic.com",
+		"claude.api_key_env": "ANTHROPIC_API_KEY",
+		"claude.model":       "claude-sonnet-4-6",
+		"claude.max_tokens":  "512",
+		"claude.thinking":    "adaptive",
+		"claude.effort":      "medium",
 	}
 	for key, value := range settings {
 		if err := Set(&cfg, key, value); err != nil {
@@ -174,42 +180,18 @@ func TestSetClaudeConfig(t *testing.T) {
 			t.Fatalf("Get(%s) = %q, want %q", key, got, value)
 		}
 	}
-	if cfg.Claude.MaxTokens != 512 || cfg.Claude.Thinking != "adaptive" || cfg.Claude.ThinkingBudgetTokens != 256 {
+	if cfg.Claude.MaxTokens != 512 || cfg.Claude.Thinking != "adaptive" || cfg.Claude.Effort != "medium" {
 		t.Fatalf("Claude = %#v", cfg.Claude)
+	}
+	if err := Set(&cfg, "claude.effort", "unset"); err != nil || cfg.Claude.Effort != "" {
+		t.Fatalf("unset claude.effort: value = %q, error = %v", cfg.Claude.Effort, err)
 	}
 }
 
 func TestSetClaudeThinkingRejectsUnknownValue(t *testing.T) {
 	cfg := Default()
-	if err := Set(&cfg, "claude.thinking", "always"); err == nil {
+	if err := Set(&cfg, "claude.thinking", "enabled"); err == nil {
 		t.Fatal("Set() error = nil, want validation error")
-	}
-}
-
-func TestSetOptionalProviderTemperatures(t *testing.T) {
-	cfg := Default()
-	settings := map[string]string{
-		"openai.temperature":   "0.3",
-		"deepseek.temperature": "0.4",
-		"claude.temperature":   "0.5",
-	}
-	for key, value := range settings {
-		if err := Set(&cfg, key, value); err != nil {
-			t.Fatalf("Set(%s) error = %v", key, err)
-		}
-		got, err := Get(cfg, key)
-		if err != nil || got != value {
-			t.Fatalf("Get(%s) = %q, %v; want %q, nil", key, got, err, value)
-		}
-	}
-	if err := Set(&cfg, "openai.temperature", "unset"); err != nil {
-		t.Fatalf("Set(unset) error = %v", err)
-	}
-	if cfg.OpenAI.Temperature != nil {
-		t.Fatalf("OpenAI.Temperature = %#v, want nil", cfg.OpenAI.Temperature)
-	}
-	if err := Set(&cfg, "claude.temperature", "1.1"); err == nil {
-		t.Fatal("Set(claude.temperature) error = nil, want validation error")
 	}
 }
 

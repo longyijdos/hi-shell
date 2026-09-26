@@ -14,13 +14,12 @@ import (
 const claudeAPIVersion = "2023-06-01"
 
 type ClaudeProvider struct {
-	BaseURL              string
-	APIKeyEnv            string
-	Thinking             string
-	ThinkingBudgetTokens int
-	MaxTokens            int
-	Temperature          *float64
-	Client               *http.Client
+	BaseURL   string
+	APIKeyEnv string
+	Thinking  string
+	Effort    string
+	MaxTokens int
+	Client    *http.Client
 }
 
 func (p ClaudeProvider) Generate(ctx context.Context, req Request) (Completion, error) {
@@ -71,25 +70,19 @@ func (p ClaudeProvider) Generate(ctx context.Context, req Request) (Completion, 
 		thinking = "disabled"
 	}
 	switch thinking {
-	case "disabled":
-		if p.Temperature != nil {
-			if *p.Temperature < 0 || *p.Temperature > 1 {
-				return Completion{}, fmt.Errorf("claude temperature must be between 0 and 1")
-			}
-			payload.Temperature = p.Temperature
-		}
-	case "adaptive":
+	case "disabled", "adaptive":
 		payload.Thinking = &claudeThinking{Type: thinking}
-	case "enabled":
-		if p.ThinkingBudgetTokens <= 0 {
-			return Completion{}, fmt.Errorf("claude thinking_budget_tokens must be a positive integer when thinking is enabled")
-		}
-		if p.ThinkingBudgetTokens >= maxTokens {
-			return Completion{}, fmt.Errorf("claude thinking_budget_tokens must be less than max_tokens when thinking is enabled")
-		}
-		payload.Thinking = &claudeThinking{Type: thinking, BudgetTokens: p.ThinkingBudgetTokens}
 	default:
-		return Completion{}, fmt.Errorf("claude thinking must be disabled, enabled, or adaptive")
+		return Completion{}, fmt.Errorf("claude thinking must be disabled or adaptive")
+	}
+	effort := strings.ToLower(strings.TrimSpace(p.Effort))
+	if effort != "" {
+		switch effort {
+		case "low", "medium", "high", "xhigh", "max":
+			payload.OutputConfig = &claudeOutputConfig{Effort: effort}
+		default:
+			return Completion{}, fmt.Errorf("claude effort must be low, medium, high, xhigh, or max")
+		}
 	}
 
 	body, err := json.Marshal(payload)
@@ -143,17 +136,20 @@ func (p ClaudeProvider) Generate(ctx context.Context, req Request) (Completion, 
 }
 
 type claudeRequest struct {
-	Model       string          `json:"model"`
-	MaxTokens   int             `json:"max_tokens"`
-	System      string          `json:"system,omitempty"`
-	Messages    []Message       `json:"messages"`
-	Thinking    *claudeThinking `json:"thinking,omitempty"`
-	Temperature *float64        `json:"temperature,omitempty"`
+	Model        string              `json:"model"`
+	MaxTokens    int                 `json:"max_tokens"`
+	System       string              `json:"system,omitempty"`
+	Messages     []Message           `json:"messages"`
+	Thinking     *claudeThinking     `json:"thinking,omitempty"`
+	OutputConfig *claudeOutputConfig `json:"output_config,omitempty"`
 }
 
 type claudeThinking struct {
-	Type         string `json:"type"`
-	BudgetTokens int    `json:"budget_tokens,omitempty"`
+	Type string `json:"type"`
+}
+
+type claudeOutputConfig struct {
+	Effort string `json:"effort"`
 }
 
 type claudeResponse struct {

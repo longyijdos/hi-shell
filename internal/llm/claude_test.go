@@ -30,11 +30,11 @@ func TestClaudeProviderSendsMessagesRequest(t *testing.T) {
 
 	t.Setenv("ANTHROPIC_API_KEY", "test-key")
 	provider := ClaudeProvider{
-		BaseURL:              server.URL,
-		APIKeyEnv:            "ANTHROPIC_API_KEY",
-		Thinking:             "enabled",
-		ThinkingBudgetTokens: 32,
-		MaxTokens:            64,
+		BaseURL:   server.URL,
+		APIKeyEnv: "ANTHROPIC_API_KEY",
+		Thinking:  "adaptive",
+		Effort:    "medium",
+		MaxTokens: 64,
 	}
 	completion, err := provider.Generate(context.Background(), Request{
 		Model: "claude-test",
@@ -56,8 +56,15 @@ func TestClaudeProviderSendsMessagesRequest(t *testing.T) {
 		t.Fatalf("max_tokens = %#v", payload["max_tokens"])
 	}
 	thinking, ok := payload["thinking"].(map[string]any)
-	if !ok || thinking["type"] != "enabled" || thinking["budget_tokens"] != float64(32) {
+	if !ok || thinking["type"] != "adaptive" {
 		t.Fatalf("thinking = %#v", payload["thinking"])
+	}
+	if _, exists := thinking["budget_tokens"]; exists {
+		t.Fatalf("budget_tokens = %#v, want omitted", thinking["budget_tokens"])
+	}
+	outputConfig, ok := payload["output_config"].(map[string]any)
+	if !ok || outputConfig["effort"] != "medium" {
+		t.Fatalf("output_config = %#v, want medium effort", payload["output_config"])
 	}
 	if payload["system"] != "Return a command." {
 		t.Fatalf("system = %#v", payload["system"])
@@ -72,7 +79,7 @@ func TestClaudeProviderSendsMessagesRequest(t *testing.T) {
 	}
 }
 
-func TestClaudeProviderOmitsThinkingWhenDisabled(t *testing.T) {
+func TestClaudeProviderSendsDisabledThinking(t *testing.T) {
 	var payload map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -82,72 +89,29 @@ func TestClaudeProviderOmitsThinkingWhenDisabled(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := ClaudeProvider{BaseURL: server.URL, Temperature: float64Pointer(0.2)}
+	provider := ClaudeProvider{BaseURL: server.URL}
 	if _, err := provider.Generate(context.Background(), Request{
 		Model:    "claude-test",
 		Messages: []Message{{Role: "user", Content: "where am I"}},
 	}); err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
-	if _, exists := payload["thinking"]; exists {
-		t.Fatalf("thinking = %#v, want omitted", payload["thinking"])
+	thinking, ok := payload["thinking"].(map[string]any)
+	if !ok || thinking["type"] != "disabled" {
+		t.Fatalf("thinking = %#v, want disabled", payload["thinking"])
 	}
-	if payload["temperature"] != 0.2 {
-		t.Fatalf("temperature = %#v, want 0.2", payload["temperature"])
-	}
-}
-
-func TestClaudeProviderOmitsTemperatureWhenThinkingEnabled(t *testing.T) {
-	var payload map[string]any
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			t.Fatalf("decode request body: %v", err)
-		}
-		_, _ = w.Write([]byte(`{"content":[{"type":"text","text":"pwd"}]}`))
-	}))
-	defer server.Close()
-
-	provider := ClaudeProvider{
-		BaseURL:              server.URL,
-		Thinking:             "enabled",
-		ThinkingBudgetTokens: 32,
-		MaxTokens:            64,
-		Temperature:          float64Pointer(0.2),
-	}
-	if _, err := provider.Generate(context.Background(), Request{
-		Model:    "claude-test",
-		Messages: []Message{{Role: "user", Content: "where am I"}},
-	}); err != nil {
-		t.Fatalf("Generate() error = %v", err)
-	}
-	if _, exists := payload["temperature"]; exists {
-		t.Fatalf("temperature = %#v, want omitted when thinking is enabled", payload["temperature"])
+	if _, exists := payload["output_config"]; exists {
+		t.Fatalf("output_config = %#v, want omitted", payload["output_config"])
 	}
 }
 
 func TestClaudeProviderRejectsInvalidThinking(t *testing.T) {
-	provider := ClaudeProvider{BaseURL: "https://example.test", Thinking: "always"}
+	provider := ClaudeProvider{BaseURL: "https://example.test", Thinking: "enabled"}
 	_, err := provider.Generate(context.Background(), Request{
 		Model:    "claude-test",
 		Messages: []Message{{Role: "user", Content: "hello"}},
 	})
-	if err == nil || err.Error() != "claude thinking must be disabled, enabled, or adaptive" {
-		t.Fatalf("Generate() error = %v", err)
-	}
-}
-
-func TestClaudeProviderRequiresBudgetBelowMaxTokensWhenEnabled(t *testing.T) {
-	provider := ClaudeProvider{
-		BaseURL:              "https://example.test",
-		Thinking:             "enabled",
-		ThinkingBudgetTokens: 256,
-		MaxTokens:            256,
-	}
-	_, err := provider.Generate(context.Background(), Request{
-		Model:    "claude-test",
-		Messages: []Message{{Role: "user", Content: "hello"}},
-	})
-	if err == nil || err.Error() != "claude thinking_budget_tokens must be less than max_tokens when thinking is enabled" {
+	if err == nil || err.Error() != "claude thinking must be disabled or adaptive" {
 		t.Fatalf("Generate() error = %v", err)
 	}
 }

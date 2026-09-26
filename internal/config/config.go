@@ -21,42 +21,39 @@ const (
 var ErrSecretNotStored = errors.New("hi-shell does not store API keys in config; set the provider API key environment variable instead")
 
 type Config struct {
-	Provider    string            `toml:"provider"`
-	TimeoutMS   int               `toml:"timeout_ms"`
-	OpenAI      OpenAIConfig      `toml:"openai"`
-	DeepSeek    DeepSeekConfig    `toml:"deepseek"`
-	Claude      ClaudeConfig      `toml:"claude"`
-	Context     ContextConfig     `toml:"context"`
-	History     HistoryConfig     `toml:"history"`
-	Session     SessionConfig     `toml:"session"`
-	Safety      SafetyConfig      `toml:"safety"`
+	Provider  string         `toml:"provider"`
+	TimeoutMS int            `toml:"timeout_ms"`
+	OpenAI    OpenAIConfig   `toml:"openai"`
+	DeepSeek  DeepSeekConfig `toml:"deepseek"`
+	Claude    ClaudeConfig   `toml:"claude"`
+	Context   ContextConfig  `toml:"context"`
+	History   HistoryConfig  `toml:"history"`
+	Session   SessionConfig  `toml:"session"`
+	Safety    SafetyConfig   `toml:"safety"`
 }
 
 type OpenAIConfig struct {
-	BaseURL     string   `toml:"base_url"`
-	APIKeyEnv   string   `toml:"api_key_env"`
-	Model       string   `toml:"model"`
-	Temperature *float64 `toml:"temperature,omitempty"`
+	BaseURL   string `toml:"base_url"`
+	APIKeyEnv string `toml:"api_key_env"`
+	Model     string `toml:"model"`
 }
 
 type DeepSeekConfig struct {
-	BaseURL         string   `toml:"base_url"`
-	APIKeyEnv       string   `toml:"api_key_env"`
-	Model           string   `toml:"model"`
-	Thinking        string   `toml:"thinking"`
-	ReasoningEffort string   `toml:"reasoning_effort"`
-	MaxTokens       int      `toml:"max_tokens"`
-	Temperature     *float64 `toml:"temperature,omitempty"`
+	BaseURL         string `toml:"base_url"`
+	APIKeyEnv       string `toml:"api_key_env"`
+	Model           string `toml:"model"`
+	Thinking        string `toml:"thinking"`
+	ReasoningEffort string `toml:"reasoning_effort,omitempty"`
+	MaxTokens       int    `toml:"max_tokens"`
 }
 
 type ClaudeConfig struct {
-	BaseURL              string   `toml:"base_url"`
-	APIKeyEnv            string   `toml:"api_key_env"`
-	Model                string   `toml:"model"`
-	MaxTokens            int      `toml:"max_tokens"`
-	Thinking             string   `toml:"thinking"`
-	ThinkingBudgetTokens int      `toml:"thinking_budget_tokens"`
-	Temperature          *float64 `toml:"temperature,omitempty"`
+	BaseURL   string `toml:"base_url"`
+	APIKeyEnv string `toml:"api_key_env"`
+	Model     string `toml:"model"`
+	MaxTokens int    `toml:"max_tokens"`
+	Thinking  string `toml:"thinking"`
+	Effort    string `toml:"effort,omitempty"`
 }
 
 type ContextConfig struct {
@@ -99,20 +96,18 @@ func Default() Config {
 			Model:     "gpt-4.1-mini",
 		},
 		DeepSeek: DeepSeekConfig{
-			BaseURL:         "https://api.deepseek.com/v1",
-			APIKeyEnv:       "DEEPSEEK_API_KEY",
-			Model:           "deepseek-v4-flash",
-			Thinking:        "disabled",
-			ReasoningEffort: "high",
-			MaxTokens:       256,
+			BaseURL:   "https://api.deepseek.com/v1",
+			APIKeyEnv: "DEEPSEEK_API_KEY",
+			Model:     "deepseek-flash",
+			Thinking:  "disabled",
+			MaxTokens: 256,
 		},
 		Claude: ClaudeConfig{
-			BaseURL:              "https://api.anthropic.com",
-			APIKeyEnv:            "ANTHROPIC_API_KEY",
-			Model:                "claude-haiku-4-5",
-			MaxTokens:            256,
-			Thinking:             "disabled",
-			ThinkingBudgetTokens: 1024,
+			BaseURL:   "https://api.anthropic.com",
+			APIKeyEnv: "ANTHROPIC_API_KEY",
+			Model:     "claude-haiku-4-5",
+			MaxTokens: 256,
+			Thinking:  "disabled",
 		},
 		Context: ContextConfig{
 			PWD:            true,
@@ -265,12 +260,6 @@ func Set(cfg *Config, key, value string) error {
 		cfg.OpenAI.BaseURL = value
 	case "openai.api_key_env", "api_key_env":
 		cfg.OpenAI.APIKeyEnv = value
-	case "openai.temperature":
-		temperature, err := parseOptionalTemperature(value, "openai.temperature", 2)
-		if err != nil {
-			return err
-		}
-		cfg.OpenAI.Temperature = temperature
 	case "api_key":
 		return ErrSecretNotStored
 	case "deepseek.base_url":
@@ -285,16 +274,12 @@ func Set(cfg *Config, key, value string) error {
 		}
 		cfg.DeepSeek.Thinking = value
 	case "deepseek.reasoning_effort":
-		if value != "high" && value != "max" {
-			return fmt.Errorf("deepseek.reasoning_effort must be high or max")
+		if value == "unset" {
+			value = ""
+		} else if value != "high" && value != "max" {
+			return fmt.Errorf("deepseek.reasoning_effort must be high, max, or unset")
 		}
 		cfg.DeepSeek.ReasoningEffort = value
-	case "deepseek.temperature":
-		temperature, err := parseOptionalTemperature(value, "deepseek.temperature", 2)
-		if err != nil {
-			return err
-		}
-		cfg.DeepSeek.Temperature = temperature
 	case "deepseek.max_tokens":
 		maxTokens, err := strconv.Atoi(value)
 		if err != nil || maxTokens <= 0 {
@@ -314,22 +299,17 @@ func Set(cfg *Config, key, value string) error {
 		}
 		cfg.Claude.MaxTokens = maxTokens
 	case "claude.thinking":
-		if value != "disabled" && value != "enabled" && value != "adaptive" {
-			return fmt.Errorf("claude.thinking must be disabled, enabled, or adaptive")
+		if value != "disabled" && value != "adaptive" {
+			return fmt.Errorf("claude.thinking must be disabled or adaptive")
 		}
 		cfg.Claude.Thinking = value
-	case "claude.thinking_budget_tokens":
-		thinkingBudgetTokens, err := strconv.Atoi(value)
-		if err != nil || thinkingBudgetTokens <= 0 {
-			return fmt.Errorf("claude.thinking_budget_tokens must be a positive integer")
+	case "claude.effort":
+		if value == "unset" {
+			value = ""
+		} else if value != "low" && value != "medium" && value != "high" && value != "xhigh" && value != "max" {
+			return fmt.Errorf("claude.effort must be low, medium, high, xhigh, max, or unset")
 		}
-		cfg.Claude.ThinkingBudgetTokens = thinkingBudgetTokens
-	case "claude.temperature":
-		temperature, err := parseOptionalTemperature(value, "claude.temperature", 1)
-		if err != nil {
-			return err
-		}
-		cfg.Claude.Temperature = temperature
+		cfg.Claude.Effort = value
 	case "context.pwd":
 		return setBool(value, &cfg.Context.PWD)
 	case "context.os":
@@ -388,8 +368,6 @@ func Get(cfg Config, key string) (string, error) {
 		return cfg.OpenAI.BaseURL, nil
 	case "openai.api_key_env", "api_key_env":
 		return cfg.OpenAI.APIKeyEnv, nil
-	case "openai.temperature":
-		return formatOptionalFloat(cfg.OpenAI.Temperature), nil
 	case "deepseek.base_url":
 		return cfg.DeepSeek.BaseURL, nil
 	case "deepseek.api_key_env":
@@ -400,8 +378,6 @@ func Get(cfg Config, key string) (string, error) {
 		return cfg.DeepSeek.Thinking, nil
 	case "deepseek.reasoning_effort":
 		return cfg.DeepSeek.ReasoningEffort, nil
-	case "deepseek.temperature":
-		return formatOptionalFloat(cfg.DeepSeek.Temperature), nil
 	case "deepseek.max_tokens":
 		return strconv.Itoa(cfg.DeepSeek.MaxTokens), nil
 	case "claude.base_url":
@@ -414,10 +390,8 @@ func Get(cfg Config, key string) (string, error) {
 		return strconv.Itoa(cfg.Claude.MaxTokens), nil
 	case "claude.thinking":
 		return cfg.Claude.Thinking, nil
-	case "claude.thinking_budget_tokens":
-		return strconv.Itoa(cfg.Claude.ThinkingBudgetTokens), nil
-	case "claude.temperature":
-		return formatOptionalFloat(cfg.Claude.Temperature), nil
+	case "claude.effort":
+		return cfg.Claude.Effort, nil
 	case "context.pwd":
 		return strconv.FormatBool(cfg.Context.PWD), nil
 	case "context.os":
@@ -477,24 +451,6 @@ func setPositiveInt(value string, target *int, name string) error {
 	return nil
 }
 
-func parseOptionalTemperature(value, name string, maximum float64) (*float64, error) {
-	if value == "unset" {
-		return nil, nil
-	}
-	temperature, err := strconv.ParseFloat(value, 64)
-	if err != nil || temperature < 0 || temperature > maximum {
-		return nil, fmt.Errorf("%s must be a number between 0 and %s, or unset", name, strconv.FormatFloat(maximum, 'f', -1, 64))
-	}
-	return &temperature, nil
-}
-
-func formatOptionalFloat(value *float64) string {
-	if value == nil {
-		return ""
-	}
-	return strconv.FormatFloat(*value, 'f', -1, 64)
-}
-
 func applyDefaults(cfg *Config) {
 	defaults := Default()
 
@@ -549,9 +505,6 @@ func applyDefaults(cfg *Config) {
 	if cfg.DeepSeek.Thinking == "" {
 		cfg.DeepSeek.Thinking = defaults.DeepSeek.Thinking
 	}
-	if cfg.DeepSeek.ReasoningEffort == "" {
-		cfg.DeepSeek.ReasoningEffort = defaults.DeepSeek.ReasoningEffort
-	}
 	if cfg.DeepSeek.MaxTokens <= 0 {
 		cfg.DeepSeek.MaxTokens = defaults.DeepSeek.MaxTokens
 	}
@@ -569,8 +522,5 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.Claude.Thinking == "" {
 		cfg.Claude.Thinking = defaults.Claude.Thinking
-	}
-	if cfg.Claude.ThinkingBudgetTokens <= 0 {
-		cfg.Claude.ThinkingBudgetTokens = defaults.Claude.ThinkingBudgetTokens
 	}
 }
